@@ -4,4 +4,7 @@ version = "0.1.0"
 description = "MCP server for inspecting mitmproxy traffic"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "mcp>=1.27.0",
+    "mitmproxy>=12.2.1",
+]
