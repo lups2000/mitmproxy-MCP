@@ -13,7 +13,18 @@ class NormalizedFlow:
     timestamp: str
     method: str
     url: str
+    scheme: str
+    host: str
+    port: int
+    path: str
+    query: str
+    http_version: str
     status_code: int | None
+    response_reason: str | None
+    request_content_type: str
+    response_content_type: str
+    request_body_size: int
+    response_body_size: int
     request_headers: dict[str, str]
     response_headers: dict[str, str]
     request_body_preview: str
@@ -57,7 +68,18 @@ class FlowStore:
             timestamp=datetime.now(UTC).isoformat(),
             method=flow.request.method,
             url=flow.request.pretty_url,
+            scheme=flow.request.scheme,
+            host=flow.request.host,
+            port=flow.request.port,
+            path=flow.request.path,
+            query=flow.request.query.string if flow.request.query else "",
+            http_version=flow.request.http_version,
             status_code=response.status_code if response else None,
+            response_reason=response.reason if response else None,
+            request_content_type=flow.request.headers.get("content-type", ""),
+            response_content_type=response.headers.get("content-type", "") if response else "",
+            request_body_size=len(flow.request.content or b""),
+            response_body_size=len(response.content or b"") if response else 0,
             request_headers=dict(flow.request.headers),
             response_headers=dict(response.headers) if response else {},
             request_body_preview=_preview_bytes(flow.request.content),
