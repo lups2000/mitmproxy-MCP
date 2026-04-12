@@ -14,13 +14,13 @@ mcp = FastMCP(
 
 @mcp.tool()
 def list_captured_flows(limit: int = 20) -> list[dict]:
-    """List the most recent captured HTTP flows."""
+    """List compact summaries for the most recent captured HTTP flows."""
     return flow_store.list_flows(limit=limit)
 
 
 @mcp.tool()
 def get_captured_flow(flow_id: str) -> dict | None:
-    """Fetch one captured flow by its mitmproxy flow id."""
+    """Fetch a full detailed flow by its mitmproxy flow id."""
     return flow_store.get_flow(flow_id)
 
 

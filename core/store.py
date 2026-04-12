@@ -7,25 +7,26 @@ from typing import Any
 from mitmproxy import http
 
 from .config import settings
-from .models import NormalizedFlow
+from .models import FlowDetail
+from .models import FlowSummary
 
 
 class FlowStore:
     def __init__(self, max_flows: int = settings.max_flows) -> None:
         self.max_flows = max_flows
-        self._flows: list[NormalizedFlow] = []
+        self._flows: list[FlowDetail] = []
 
-    def add_from_mitmproxy_flow(self, flow: http.HTTPFlow) -> NormalizedFlow:
-        normalized_flow = self._normalize_flow(flow)
-        self._flows.append(normalized_flow)
+    def add_from_mitmproxy_flow(self, flow: http.HTTPFlow) -> FlowDetail:
+        flow_detail = self._normalize_flow(flow)
+        self._flows.append(flow_detail)
 
         if len(self._flows) > self.max_flows:
             self._flows = self._flows[-self.max_flows :]
 
-        return normalized_flow
+        return flow_detail
 
     def list_flows(self, limit: int = 20) -> list[dict[str, Any]]:
-        return [asdict(flow) for flow in self._flows[-limit:]]
+        return [asdict(self._to_summary(flow)) for flow in self._flows[-limit:]]
 
     def get_flow(self, flow_id: str) -> dict[str, Any] | None:
         for flow in reversed(self._flows):
@@ -39,10 +40,10 @@ class FlowStore:
         self._flows.clear()
         return deleted_count
 
-    def _normalize_flow(self, flow: http.HTTPFlow) -> NormalizedFlow:
+    def _normalize_flow(self, flow: http.HTTPFlow) -> FlowDetail:
         response = flow.response
 
-        return NormalizedFlow(
+        return FlowDetail(
             id=flow.id,
             timestamp=datetime.now(UTC).isoformat(),
             method=flow.request.method,
@@ -63,6 +64,23 @@ class FlowStore:
             response_headers=dict(response.headers) if response else {},
             request_body_preview=_preview_bytes(flow.request.content),
             response_body_preview=_preview_bytes(response.content) if response else "",
+        )
+
+    def _to_summary(self, flow: FlowDetail) -> FlowSummary:
+        return FlowSummary(
+            id=flow.id,
+            timestamp=flow.timestamp,
+            method=flow.method,
+            host=flow.host,
+            path=flow.path,
+            query=flow.query,
+            url=flow.url,
+            status_code=flow.status_code,
+            response_reason=flow.response_reason,
+            request_content_type=flow.request_content_type,
+            response_content_type=flow.response_content_type,
+            request_body_size=flow.request_body_size,
+            response_body_size=flow.response_body_size,
         )
 
 

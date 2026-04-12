@@ -2,7 +2,24 @@ from dataclasses import dataclass
 
 
 @dataclass
-class NormalizedFlow:
+class FlowSummary:
+    id: str
+    timestamp: str
+    method: str
+    host: str
+    path: str
+    query: str
+    url: str
+    status_code: int | None
+    response_reason: str | None
+    request_content_type: str
+    response_content_type: str
+    request_body_size: int
+    response_body_size: int
+
+
+@dataclass
+class FlowDetail:
     id: str
     timestamp: str
     method: str
