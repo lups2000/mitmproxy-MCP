@@ -37,12 +37,14 @@ class FlowStore:
         self,
         limit: int = 20,
         offset: int = 0,
+        marked: bool | None = None,
         host: str | None = None,
         method: str | None = None,
         status_code: int | None = None,
         path_contains: str | None = None,
     ) -> list[dict[str, Any]]:
         matching_flows = self._filter_flows(
+            marked=marked,
             host=host,
             method=method,
             status_code=status_code,
@@ -57,6 +59,7 @@ class FlowStore:
 
     def get_flow_count(
         self,
+        marked: bool | None = None,
         host: str | None = None,
         method: str | None = None,
         status_code: int | None = None,
@@ -64,6 +67,7 @@ class FlowStore:
     ) -> int:
         return len(
             self._filter_flows(
+                marked=marked,
                 host=host,
                 method=method,
                 status_code=status_code,
@@ -132,6 +136,7 @@ class FlowStore:
 
     def _filter_flows(
         self,
+        marked: bool | None = None,
         host: str | None = None,
         method: str | None = None,
         status_code: int | None = None,
@@ -141,6 +146,9 @@ class FlowStore:
         matching_flows: list[FlowDetail] = []
 
         for flow in self._flows.values():
+            if marked is not None and flow.marked != marked:
+                continue
+
             if host is not None and flow.host != host:
                 continue
 

@@ -25,6 +25,7 @@ def list_captured_flows(
     return flow_store.list_flows(
         limit=limit,
         offset=offset,
+        marked=None,
         host=host,
         method=method,
         status_code=status_code,
@@ -40,6 +41,7 @@ def get_captured_flow(flow_id: str) -> dict | None:
 
 @mcp.tool()
 def get_flow_count(
+    marked: bool | None = None,
     host: str | None = None,
     method: str | None = None,
     status_code: int | None = None,
@@ -48,12 +50,19 @@ def get_flow_count(
     """Count captured flows, optionally with the same filters as the list tool."""
     return {
         "count": flow_store.get_flow_count(
+            marked=marked,
             host=host,
             method=method,
             status_code=status_code,
             path_contains=path_contains,
         )
     }
+
+
+@mcp.tool()
+def list_marked_flows(limit: int = 20, offset: int = 0) -> list[dict]:
+    """List only flows that have been marked."""
+    return flow_store.list_flows(limit=limit, offset=offset, marked=True)
 
 
 @mcp.tool()
