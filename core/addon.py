@@ -1,7 +1,7 @@
 from mitmproxy import ctx
 from mitmproxy import http
 
-from flow_store import flow_store
+from .store import flow_store
 
 
 class MCPFlowCaptureAddon:

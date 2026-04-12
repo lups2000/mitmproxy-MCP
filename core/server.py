@@ -1,9 +1,15 @@
 from mcp.server.fastmcp import FastMCP
 
-from flow_store import flow_store
+from .config import settings
+from .store import flow_store
 
 
-mcp = FastMCP("mitmproxy-mcp", instructions="Inspect HTTP flows captured from mitmproxy.")
+mcp = FastMCP(
+    "mitmproxy-mcp",
+    instructions="Inspect HTTP flows captured from mitmproxy.",
+    host=settings.mcp_host,
+    port=settings.mcp_port,
+)
 
 
 @mcp.tool()
@@ -24,5 +30,6 @@ def clear_captured_flows() -> dict[str, int]:
     deleted_count = flow_store.clear()
     return {"deleted_count": deleted_count}
 
-if __name__ == "__main__":
-    mcp.run()
+
+def main() -> None:
+    mcp.run(transport=settings.mcp_transport)

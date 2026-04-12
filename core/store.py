@@ -1,38 +1,17 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
 from datetime import UTC, datetime
 from typing import Any
 
 from mitmproxy import http
 
-
-@dataclass
-class NormalizedFlow:
-    id: str
-    timestamp: str
-    method: str
-    url: str
-    scheme: str
-    host: str
-    port: int
-    path: str
-    query: str
-    http_version: str
-    status_code: int | None
-    response_reason: str | None
-    request_content_type: str
-    response_content_type: str
-    request_body_size: int
-    response_body_size: int
-    request_headers: dict[str, str]
-    response_headers: dict[str, str]
-    request_body_preview: str
-    response_body_preview: str
+from .config import settings
+from .models import NormalizedFlow
 
 
 class FlowStore:
-    def __init__(self, max_flows: int = 1_000) -> None:
+    def __init__(self, max_flows: int = settings.max_flows) -> None:
         self.max_flows = max_flows
         self._flows: list[NormalizedFlow] = []
 
@@ -90,7 +69,7 @@ class FlowStore:
 flow_store = FlowStore()
 
 
-def _preview_bytes(data: bytes | None, limit: int = 200) -> str:
+def _preview_bytes(data: bytes | None, limit: int = settings.body_preview_limit) -> str:
     if not data:
         return ""
 
