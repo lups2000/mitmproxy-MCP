@@ -55,6 +55,44 @@ class FlowStore:
         flow = self._flows.get(flow_id)
         return asdict(flow) if flow else None
 
+    def get_flow_request(self, flow_id: str) -> dict[str, Any] | None:
+        flow = self._flows.get(flow_id)
+        if flow is None:
+            return None
+
+        return {
+            "id": flow.id,
+            "timestamp": flow.timestamp,
+            "method": flow.method,
+            "url": flow.url,
+            "scheme": flow.scheme,
+            "host": flow.host,
+            "port": flow.port,
+            "path": flow.path,
+            "query": flow.query,
+            "http_version": flow.http_version,
+            "content_type": flow.request_content_type,
+            "body_size": flow.request_body_size,
+            "headers": flow.request_headers,
+            "body_preview": flow.request_body_preview,
+        }
+
+    def get_flow_response(self, flow_id: str) -> dict[str, Any] | None:
+        flow = self._flows.get(flow_id)
+        if flow is None:
+            return None
+
+        return {
+            "id": flow.id,
+            "timestamp": flow.timestamp,
+            "status_code": flow.status_code,
+            "reason": flow.response_reason,
+            "content_type": flow.response_content_type,
+            "body_size": flow.response_body_size,
+            "headers": flow.response_headers,
+            "body_preview": flow.response_body_preview,
+        }
+
     def clear(self) -> int:
         deleted_count = len(self._flows)
         self._flows.clear()

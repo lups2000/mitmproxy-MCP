@@ -20,7 +20,7 @@ def list_captured_flows(
     method: str | None = None,
     status_code: int | None = None,
     path_contains: str | None = None,
-) -> list[dict]:
+    ) -> list[dict]:
     """List compact summaries for captured HTTP flows, with optional filters."""
     return flow_store.list_flows(
         limit=limit,
@@ -36,6 +36,18 @@ def list_captured_flows(
 def get_captured_flow(flow_id: str) -> dict | None:
     """Fetch a full detailed flow by its mitmproxy flow id."""
     return flow_store.get_flow(flow_id)
+
+
+@mcp.tool()
+def get_captured_flow_request(flow_id: str) -> dict | None:
+    """Fetch only the request-side view of a captured flow."""
+    return flow_store.get_flow_request(flow_id)
+
+
+@mcp.tool()
+def get_captured_flow_response(flow_id: str) -> dict | None:
+    """Fetch only the response-side view of a captured flow."""
+    return flow_store.get_flow_response(flow_id)
 
 
 @mcp.tool()
