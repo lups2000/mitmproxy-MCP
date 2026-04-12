@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import OrderedDict
 from dataclasses import asdict
 from datetime import UTC, datetime
 from typing import Any
@@ -14,26 +15,28 @@ from .models import FlowSummary
 class FlowStore:
     def __init__(self, max_flows: int = settings.max_flows) -> None:
         self.max_flows = max_flows
-        self._flows: list[FlowDetail] = []
+        self._flows: OrderedDict[str, FlowDetail] = OrderedDict()
 
     def add_from_mitmproxy_flow(self, flow: http.HTTPFlow) -> FlowDetail:
         flow_detail = self._normalize_flow(flow)
-        self._flows.append(flow_detail)
+
+        # Preserve insertion order while allowing O(1) lookup by flow id.
+        if flow_detail.id in self._flows:
+            del self._flows[flow_detail.id]
+        self._flows[flow_detail.id] = flow_detail
 
         if len(self._flows) > self.max_flows:
-            self._flows = self._flows[-self.max_flows :]
+            self._flows.popitem(last=False)
 
         return flow_detail
 
     def list_flows(self, limit: int = 20) -> list[dict[str, Any]]:
-        return [asdict(self._to_summary(flow)) for flow in self._flows[-limit:]]
+        recent_flows = list(self._flows.values())[-limit:]
+        return [asdict(self._to_summary(flow)) for flow in recent_flows]
 
     def get_flow(self, flow_id: str) -> dict[str, Any] | None:
-        for flow in reversed(self._flows):
-            if flow.id == flow_id:
-                return asdict(flow)
-
-        return None
+        flow = self._flows.get(flow_id)
+        return asdict(flow) if flow else None
 
     def clear(self) -> int:
         deleted_count = len(self._flows)
