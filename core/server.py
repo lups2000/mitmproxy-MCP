@@ -39,6 +39,24 @@ def get_captured_flow(flow_id: str) -> dict | None:
 
 
 @mcp.tool()
+def get_flow_count(
+    host: str | None = None,
+    method: str | None = None,
+    status_code: int | None = None,
+    path_contains: str | None = None,
+) -> dict[str, int]:
+    """Count captured flows, optionally with the same filters as the list tool."""
+    return {
+        "count": flow_store.get_flow_count(
+            host=host,
+            method=method,
+            status_code=status_code,
+            path_contains=path_contains,
+        )
+    }
+
+
+@mcp.tool()
 def get_captured_flow_request(flow_id: str) -> dict | None:
     """Fetch only the request-side view of a captured flow."""
     return flow_store.get_flow_request(flow_id)

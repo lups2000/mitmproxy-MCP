@@ -55,6 +55,22 @@ class FlowStore:
         flow = self._flows.get(flow_id)
         return asdict(flow) if flow else None
 
+    def get_flow_count(
+        self,
+        host: str | None = None,
+        method: str | None = None,
+        status_code: int | None = None,
+        path_contains: str | None = None,
+    ) -> int:
+        return len(
+            self._filter_flows(
+                host=host,
+                method=method,
+                status_code=status_code,
+                path_contains=path_contains,
+            )
+        )
+
     def mark_flow(self, flow_id: str) -> dict[str, Any] | None:
         flow = self._flows.get(flow_id)
         if flow is None:
