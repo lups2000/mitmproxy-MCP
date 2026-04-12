@@ -26,6 +26,7 @@ def list_captured_flows(
         limit=limit,
         offset=offset,
         marked=None,
+        error_only=False,
         host=host,
         method=method,
         status_code=status_code,
@@ -51,6 +52,7 @@ def get_flow_count(
     return {
         "count": flow_store.get_flow_count(
             marked=marked,
+            error_only=False,
             host=host,
             method=method,
             status_code=status_code,
@@ -62,7 +64,13 @@ def get_flow_count(
 @mcp.tool()
 def list_marked_flows(limit: int = 20, offset: int = 0) -> list[dict]:
     """List only flows that have been marked."""
-    return flow_store.list_flows(limit=limit, offset=offset, marked=True)
+    return flow_store.list_flows(limit=limit, offset=offset, marked=True, error_only=False)
+
+
+@mcp.tool()
+def list_error_flows(limit: int = 20, offset: int = 0) -> list[dict]:
+    """List recent flows with 4xx or 5xx response status codes."""
+    return flow_store.list_flows(limit=limit, offset=offset, marked=None, error_only=True)
 
 
 @mcp.tool()
