@@ -13,9 +13,23 @@ mcp = FastMCP(
 
 
 @mcp.tool()
-def list_captured_flows(limit: int = 20) -> list[dict]:
-    """List compact summaries for the most recent captured HTTP flows."""
-    return flow_store.list_flows(limit=limit)
+def list_captured_flows(
+    limit: int = 20,
+    offset: int = 0,
+    host: str | None = None,
+    method: str | None = None,
+    status_code: int | None = None,
+    path_contains: str | None = None,
+) -> list[dict]:
+    """List compact summaries for captured HTTP flows, with optional filters."""
+    return flow_store.list_flows(
+        limit=limit,
+        offset=offset,
+        host=host,
+        method=method,
+        status_code=status_code,
+        path_contains=path_contains,
+    )
 
 
 @mcp.tool()

@@ -30,9 +30,23 @@ class FlowStore:
 
         return flow_detail
 
-    def list_flows(self, limit: int = 20) -> list[dict[str, Any]]:
-        recent_flows = list(self._flows.values())[-limit:]
-        return [asdict(self._to_summary(flow)) for flow in recent_flows]
+    def list_flows(
+        self,
+        limit: int = 20,
+        offset: int = 0,
+        host: str | None = None,
+        method: str | None = None,
+        status_code: int | None = None,
+        path_contains: str | None = None,
+    ) -> list[dict[str, Any]]:
+        matching_flows = self._filter_flows(
+            host=host,
+            method=method,
+            status_code=status_code,
+            path_contains=path_contains,
+        )
+        paginated_flows = matching_flows[offset : offset + limit]
+        return [asdict(self._to_summary(flow)) for flow in paginated_flows]
 
     def get_flow(self, flow_id: str) -> dict[str, Any] | None:
         flow = self._flows.get(flow_id)
@@ -42,6 +56,33 @@ class FlowStore:
         deleted_count = len(self._flows)
         self._flows.clear()
         return deleted_count
+
+    def _filter_flows(
+        self,
+        host: str | None = None,
+        method: str | None = None,
+        status_code: int | None = None,
+        path_contains: str | None = None,
+    ) -> list[FlowDetail]:
+        normalized_method = method.upper() if method is not None else None
+        matching_flows: list[FlowDetail] = []
+
+        for flow in self._flows.values():
+            if host is not None and flow.host != host:
+                continue
+
+            if normalized_method is not None and flow.method.upper() != normalized_method:
+                continue
+
+            if status_code is not None and flow.status_code != status_code:
+                continue
+
+            if path_contains is not None and path_contains not in flow.path:
+                continue
+
+            matching_flows.append(flow)
+
+        return matching_flows
 
     def _normalize_flow(self, flow: http.HTTPFlow) -> FlowDetail:
         response = flow.response
