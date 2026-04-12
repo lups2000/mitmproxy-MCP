@@ -55,6 +55,22 @@ class FlowStore:
         flow = self._flows.get(flow_id)
         return asdict(flow) if flow else None
 
+    def mark_flow(self, flow_id: str) -> dict[str, Any] | None:
+        flow = self._flows.get(flow_id)
+        if flow is None:
+            return None
+
+        flow.marked = True
+        return {"flow_id": flow_id, "marked": True}
+
+    def unmark_flow(self, flow_id: str) -> dict[str, Any] | None:
+        flow = self._flows.get(flow_id)
+        if flow is None:
+            return None
+
+        flow.marked = False
+        return {"flow_id": flow_id, "marked": False}
+
     def get_flow_request(self, flow_id: str) -> dict[str, Any] | None:
         flow = self._flows.get(flow_id)
         if flow is None:
@@ -156,6 +172,7 @@ class FlowStore:
             response_headers=redacted_response_headers,
             request_body_preview=request_body_preview,
             response_body_preview=response_body_preview,
+            marked=False,
         )
 
     def _to_summary(self, flow: FlowDetail) -> FlowSummary:
@@ -173,6 +190,7 @@ class FlowStore:
             response_content_type=flow.response_content_type,
             request_body_size=flow.request_body_size,
             response_body_size=flow.response_body_size,
+            marked=flow.marked,
         )
 
     def _build_redacted_url(self, flow: http.HTTPFlow, redacted_query: str) -> str:

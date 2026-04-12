@@ -16,6 +16,7 @@ class FlowSummary:
     response_content_type: str
     request_body_size: int
     response_body_size: int
+    marked: bool
 
 
 @dataclass
@@ -40,3 +41,4 @@ class FlowDetail:
     response_headers: dict[str, str]
     request_body_preview: str
     response_body_preview: str
+    marked: bool

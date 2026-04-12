@@ -51,6 +51,18 @@ def get_captured_flow_response(flow_id: str) -> dict | None:
 
 
 @mcp.tool()
+def mark_flow(flow_id: str) -> dict | None:
+    """Mark a flow as interesting for later investigation."""
+    return flow_store.mark_flow(flow_id)
+
+
+@mcp.tool()
+def unmark_flow(flow_id: str) -> dict | None:
+    """Remove the marked flag from a flow."""
+    return flow_store.unmark_flow(flow_id)
+
+
+@mcp.tool()
 def clear_captured_flows() -> dict[str, int]:
     """Delete all captured flows from the local store."""
     deleted_count = flow_store.clear()
