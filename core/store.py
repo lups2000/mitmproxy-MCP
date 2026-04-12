@@ -10,6 +10,9 @@ from mitmproxy import http
 from .config import settings
 from .models import FlowDetail
 from .models import FlowSummary
+from .privacy import redact_body_preview
+from .privacy import redact_headers
+from .privacy import redact_query_items
 
 
 class FlowStore:
@@ -86,28 +89,35 @@ class FlowStore:
 
     def _normalize_flow(self, flow: http.HTTPFlow) -> FlowDetail:
         response = flow.response
+        redacted_request_headers = redact_headers(dict(flow.request.headers))
+        redacted_response_headers = redact_headers(dict(response.headers) if response else {})
+        redacted_query_items = redact_query_items(list(flow.request.query.items(multi=True)))
+        redacted_query = "&".join(f"{name}={value}" for name, value in redacted_query_items)
+        redacted_url = self._build_redacted_url(flow, redacted_query)
+        request_body_preview = redact_body_preview(_preview_bytes(flow.request.content))
+        response_body_preview = redact_body_preview(_preview_bytes(response.content) if response else "")
 
         return FlowDetail(
             id=flow.id,
             timestamp=datetime.now(UTC).isoformat(),
             method=flow.request.method,
-            url=flow.request.pretty_url,
+            url=redacted_url,
             scheme=flow.request.scheme,
             host=flow.request.host,
             port=flow.request.port,
             path=flow.request.path,
-            query=flow.request.query.string if flow.request.query else "",
+            query=redacted_query,
             http_version=flow.request.http_version,
             status_code=response.status_code if response else None,
             response_reason=response.reason if response else None,
-            request_content_type=flow.request.headers.get("content-type", ""),
-            response_content_type=response.headers.get("content-type", "") if response else "",
+            request_content_type=redacted_request_headers.get("content-type", ""),
+            response_content_type=redacted_response_headers.get("content-type", ""),
             request_body_size=len(flow.request.content or b""),
             response_body_size=len(response.content or b"") if response else 0,
-            request_headers=dict(flow.request.headers),
-            response_headers=dict(response.headers) if response else {},
-            request_body_preview=_preview_bytes(flow.request.content),
-            response_body_preview=_preview_bytes(response.content) if response else "",
+            request_headers=redacted_request_headers,
+            response_headers=redacted_response_headers,
+            request_body_preview=request_body_preview,
+            response_body_preview=response_body_preview,
         )
 
     def _to_summary(self, flow: FlowDetail) -> FlowSummary:
@@ -126,6 +136,12 @@ class FlowStore:
             request_body_size=flow.request_body_size,
             response_body_size=flow.response_body_size,
         )
+
+    def _build_redacted_url(self, flow: http.HTTPFlow, redacted_query: str) -> str:
+        default_port = 443 if flow.request.scheme == "https" else 80
+        port_part = "" if flow.request.port == default_port else f":{flow.request.port}"
+        query_part = f"?{redacted_query}" if redacted_query else ""
+        return f"{flow.request.scheme}://{flow.request.host}{port_part}{flow.request.path}{query_part}"
 
 
 flow_store = FlowStore()
