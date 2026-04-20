@@ -12,6 +12,8 @@ class FlowSummary:
     url: str
     status_code: int | None
     response_reason: str | None
+    has_error: bool
+    error_message: str | None
     request_content_type: str
     response_content_type: str
     request_body_size: int
@@ -33,6 +35,8 @@ class FlowDetail:
     http_version: str
     status_code: int | None
     response_reason: str | None
+    has_error: bool
+    error_message: str | None
     request_content_type: str
     response_content_type: str
     request_body_size: int

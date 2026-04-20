@@ -16,6 +16,7 @@ mcp = FastMCP(
 def list_captured_flows(
     limit: int = 20,
     offset: int = 0,
+    error_only: bool = False,
     host: str | None = None,
     method: str | None = None,
     status_code: int | None = None,
@@ -26,7 +27,7 @@ def list_captured_flows(
         limit=limit,
         offset=offset,
         marked=None,
-        error_only=False,
+        error_only=error_only,
         host=host,
         method=method,
         status_code=status_code,
@@ -43,6 +44,7 @@ def get_captured_flow(flow_id: str) -> dict | None:
 @mcp.tool()
 def get_flow_count(
     marked: bool | None = None,
+    error_only: bool = False,
     host: str | None = None,
     method: str | None = None,
     status_code: int | None = None,
@@ -52,7 +54,7 @@ def get_flow_count(
     return {
         "count": flow_store.get_flow_count(
             marked=marked,
-            error_only=False,
+            error_only=error_only,
             host=host,
             method=method,
             status_code=status_code,

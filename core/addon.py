@@ -48,6 +48,13 @@ class MCPFlowCaptureAddon:
         normalized_flow = flow_store.add_from_mitmproxy_flow(flow)
         ctx.log.info(f"Captured flow {normalized_flow.id} {normalized_flow.method} {normalized_flow.url}")
 
+    def error(self, flow: http.HTTPFlow) -> None:
+        normalized_flow = flow_store.add_from_mitmproxy_flow(flow)
+        ctx.log.info(
+            f"Captured errored flow {normalized_flow.id} {normalized_flow.method} {normalized_flow.url}: "
+            f"{normalized_flow.error_message}"
+        )
+
     def _run_mcp_server(self, transport: str) -> None:
         if transport == "streamable-http":
             asyncio.run(mcp.run_streamable_http_async())

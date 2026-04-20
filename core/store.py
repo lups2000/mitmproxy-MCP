@@ -154,8 +154,11 @@ class FlowStore:
             if marked is not None and flow.marked != marked:
                 continue
 
-            if error_only and (flow.status_code is None or flow.status_code < 400):
-                continue
+            if error_only:
+                has_http_error = flow.status_code is not None and flow.status_code >= 400
+                has_transport_error = flow.has_error
+                if not has_http_error and not has_transport_error:
+                    continue
 
             if host is not None and flow.host != host:
                 continue
@@ -196,6 +199,8 @@ class FlowStore:
             http_version=flow.request.http_version,
             status_code=response.status_code if response else None,
             response_reason=response.reason if response else None,
+            has_error=flow.error is not None,
+            error_message=flow.error.msg if flow.error is not None else None,
             request_content_type=redacted_request_headers.get("content-type", ""),
             response_content_type=redacted_response_headers.get("content-type", ""),
             request_body_size=len(flow.request.content or b""),
@@ -218,6 +223,8 @@ class FlowStore:
             url=flow.url,
             status_code=flow.status_code,
             response_reason=flow.response_reason,
+            has_error=flow.has_error,
+            error_message=flow.error_message,
             request_content_type=flow.request_content_type,
             response_content_type=flow.response_content_type,
             request_body_size=flow.request_body_size,
