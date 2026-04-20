@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import OrderedDict
 from dataclasses import asdict
 from datetime import UTC, datetime
+import threading
 from typing import Any
 
 from mitmproxy import http
@@ -18,20 +19,29 @@ from .privacy import redact_query_items
 class FlowStore:
     def __init__(self, max_flows: int = settings.max_flows) -> None:
         self.max_flows = max_flows
+        self._lock = threading.RLock()
         self._flows: OrderedDict[str, FlowDetail] = OrderedDict()
+        self._source_flows: OrderedDict[str, http.HTTPFlow] = OrderedDict()
 
     def add_from_mitmproxy_flow(self, flow: http.HTTPFlow) -> FlowDetail:
         flow_detail = self._normalize_flow(flow)
+        source_flow = flow.copy()
 
-        # Preserve insertion order while allowing O(1) lookup by flow id.
-        if flow_detail.id in self._flows:
-            del self._flows[flow_detail.id]
-        self._flows[flow_detail.id] = flow_detail
+        with self._lock:
+            # Preserve insertion order while allowing O(1) lookup by flow id.
+            if flow_detail.id in self._flows:
+                del self._flows[flow_detail.id]
+            if flow_detail.id in self._source_flows:
+                del self._source_flows[flow_detail.id]
 
-        if len(self._flows) > self.max_flows:
-            self._flows.popitem(last=False)
+            self._flows[flow_detail.id] = flow_detail
+            self._source_flows[flow_detail.id] = source_flow
 
-        return flow_detail
+            if len(self._flows) > self.max_flows:
+                oldest_flow_id, _ = self._flows.popitem(last=False)
+                self._source_flows.pop(oldest_flow_id, None)
+
+            return flow_detail
 
     def list_flows(
         self,
@@ -44,20 +54,27 @@ class FlowStore:
         status_code: int | None = None,
         path_contains: str | None = None,
     ) -> list[dict[str, Any]]:
-        matching_flows = self._filter_flows(
-            marked=marked,
-            error_only=error_only,
-            host=host,
-            method=method,
-            status_code=status_code,
-            path_contains=path_contains,
-        )
+        with self._lock:
+            matching_flows = self._filter_flows(
+                marked=marked,
+                error_only=error_only,
+                host=host,
+                method=method,
+                status_code=status_code,
+                path_contains=path_contains,
+            )
         paginated_flows = matching_flows[offset : offset + limit]
         return [asdict(self._to_summary(flow)) for flow in paginated_flows]
 
     def get_flow(self, flow_id: str) -> dict[str, Any] | None:
-        flow = self._flows.get(flow_id)
-        return asdict(flow) if flow else None
+        with self._lock:
+            flow = self._flows.get(flow_id)
+            return asdict(flow) if flow else None
+
+    def get_source_flow(self, flow_id: str) -> http.HTTPFlow | None:
+        with self._lock:
+            flow = self._source_flows.get(flow_id)
+            return flow.copy() if flow else None
 
     def get_flow_count(
         self,
@@ -68,75 +85,82 @@ class FlowStore:
         status_code: int | None = None,
         path_contains: str | None = None,
     ) -> int:
-        return len(
-            self._filter_flows(
-                marked=marked,
-                error_only=error_only,
-                host=host,
-                method=method,
-                status_code=status_code,
-                path_contains=path_contains,
+        with self._lock:
+            return len(
+                self._filter_flows(
+                    marked=marked,
+                    error_only=error_only,
+                    host=host,
+                    method=method,
+                    status_code=status_code,
+                    path_contains=path_contains,
+                )
             )
-        )
 
     def mark_flow(self, flow_id: str) -> dict[str, Any] | None:
-        flow = self._flows.get(flow_id)
-        if flow is None:
-            return None
+        with self._lock:
+            flow = self._flows.get(flow_id)
+            if flow is None:
+                return None
 
-        flow.marked = True
-        return {"flow_id": flow_id, "marked": True}
+            flow.marked = True
+            return {"flow_id": flow_id, "marked": True}
 
     def unmark_flow(self, flow_id: str) -> dict[str, Any] | None:
-        flow = self._flows.get(flow_id)
-        if flow is None:
-            return None
+        with self._lock:
+            flow = self._flows.get(flow_id)
+            if flow is None:
+                return None
 
-        flow.marked = False
-        return {"flow_id": flow_id, "marked": False}
+            flow.marked = False
+            return {"flow_id": flow_id, "marked": False}
 
     def get_flow_request(self, flow_id: str) -> dict[str, Any] | None:
-        flow = self._flows.get(flow_id)
-        if flow is None:
-            return None
+        with self._lock:
+            flow = self._flows.get(flow_id)
+            if flow is None:
+                return None
 
-        return {
-            "id": flow.id,
-            "timestamp": flow.timestamp,
-            "method": flow.method,
-            "url": flow.url,
-            "scheme": flow.scheme,
-            "host": flow.host,
-            "port": flow.port,
-            "path": flow.path,
-            "query": flow.query,
-            "http_version": flow.http_version,
-            "content_type": flow.request_content_type,
-            "body_size": flow.request_body_size,
-            "headers": flow.request_headers,
-            "body_preview": flow.request_body_preview,
-        }
+            return {
+                "id": flow.id,
+                "timestamp": flow.timestamp,
+                "method": flow.method,
+                "url": flow.url,
+                "scheme": flow.scheme,
+                "host": flow.host,
+                "port": flow.port,
+                "path": flow.path,
+                "query": flow.query,
+                "http_version": flow.http_version,
+                "content_type": flow.request_content_type,
+                "body_size": flow.request_body_size,
+                "headers": flow.request_headers,
+                "body_preview": flow.request_body_preview,
+            }
 
     def get_flow_response(self, flow_id: str) -> dict[str, Any] | None:
-        flow = self._flows.get(flow_id)
-        if flow is None:
-            return None
+        with self._lock:
+            flow = self._flows.get(flow_id)
+            if flow is None:
+                return None
 
-        return {
-            "id": flow.id,
-            "timestamp": flow.timestamp,
-            "status_code": flow.status_code,
-            "reason": flow.response_reason,
-            "content_type": flow.response_content_type,
-            "body_size": flow.response_body_size,
-            "headers": flow.response_headers,
-            "body_preview": flow.response_body_preview,
-        }
+            return {
+                "id": flow.id,
+                "timestamp": flow.timestamp,
+                "status_code": flow.status_code,
+                "reason": flow.response_reason,
+                "content_type": flow.response_content_type,
+                "body_size": flow.response_body_size,
+                "headers": flow.response_headers,
+                "body_preview": flow.response_body_preview,
+            }
 
     def clear(self) -> int:
-        deleted_count = len(self._flows)
-        self._flows.clear()
-        return deleted_count
+        with self._lock:
+            deleted_count = len(self._flows)
+            self._flows.clear()
+            self._source_flows.clear()
+            return deleted_count
 
     def _filter_flows(
         self,

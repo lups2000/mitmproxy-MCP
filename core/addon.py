@@ -6,6 +6,7 @@ import threading
 from mitmproxy import ctx
 from mitmproxy import http
 
+from .control import mitmproxy_controller
 from .server import mcp
 from .server import run_transport_async
 from .server import SUPPORTED_TRANSPORTS
@@ -33,6 +34,7 @@ class MCPFlowCaptureAddon:
             return
 
         transport = ctx.options.mcp_transport
+        mitmproxy_controller.attach_master(ctx.master)
         mcp.settings.host = ctx.options.mcp_host
         mcp.settings.port = ctx.options.mcp_port
 
@@ -59,6 +61,9 @@ class MCPFlowCaptureAddon:
 
     def _run_mcp_server(self, transport: str) -> None:
         asyncio.run(run_transport_async(transport))
+
+    def done(self) -> None:
+        mitmproxy_controller.detach_master()
 
 
 addons = [MCPFlowCaptureAddon()]

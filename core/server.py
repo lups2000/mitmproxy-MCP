@@ -1,6 +1,7 @@
 from mcp.server.fastmcp import FastMCP
 
 from .config import settings
+from .control import mitmproxy_controller
 from .store import flow_store
 
 SUPPORTED_TRANSPORTS = {"sse", "streamable-http"}
@@ -88,6 +89,16 @@ def clear_captured_flows() -> dict[str, int]:
     """Delete all captured flows from the local store."""
     deleted_count = flow_store.clear()
     return {"deleted_count": deleted_count}
+
+
+@mcp.tool()
+def replay_flow(flow_id: str) -> dict:
+    """Replay a previously captured flow through mitmproxy's client replay support."""
+    source_flow = flow_store.get_source_flow(flow_id)
+    if source_flow is None:
+        raise ValueError(f"Unknown flow_id: {flow_id}")
+
+    return mitmproxy_controller.replay_flow(source_flow)
 
 
 async def run_transport_async(transport: str) -> None:
