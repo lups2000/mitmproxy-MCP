@@ -3,8 +3,7 @@ from mcp.server.fastmcp import FastMCP
 from .config import settings
 from .store import flow_store
 
-SUPPORTED_TRANSPORTS = {"stdio", "sse", "streamable-http"}
-ADDON_SUPPORTED_TRANSPORTS = {"sse", "streamable-http"}
+SUPPORTED_TRANSPORTS = {"sse", "streamable-http"}
 
 
 mcp = FastMCP(
@@ -91,28 +90,20 @@ def clear_captured_flows() -> dict[str, int]:
     return {"deleted_count": deleted_count}
 
 
-def run_transport(transport: str) -> None:
-    _validate_transport(transport, SUPPORTED_TRANSPORTS)
-    mcp.run(transport=transport)
-
-
-async def run_transport_async(transport: str, *, addon_mode: bool = False) -> None:
-    supported_transports = ADDON_SUPPORTED_TRANSPORTS if addon_mode else SUPPORTED_TRANSPORTS
-    _validate_transport(transport, supported_transports)
+async def run_transport_async(transport: str) -> None:
+    _validate_transport(transport)
 
     if transport == "streamable-http":
         await mcp.run_streamable_http_async()
-    elif transport == "sse":
-        await mcp.run_sse_async()
     else:
-        await mcp.run_stdio_async()
+        await mcp.run_sse_async()
 
 
-def _validate_transport(transport: str, supported_transports: set[str]) -> None:
-    if transport not in supported_transports:
-        supported = ", ".join(sorted(supported_transports))
+def _validate_transport(transport: str) -> None:
+    if transport not in SUPPORTED_TRANSPORTS:
+        supported = ", ".join(sorted(SUPPORTED_TRANSPORTS))
         raise ValueError(f"Unsupported MCP transport '{transport}'. Supported transports: {supported}")
 
 
 def main() -> None:
-    run_transport(settings.mcp_transport)
+    raise RuntimeError("Use mitmproxy addon mode to run this project. Standalone MCP server mode is not supported.")

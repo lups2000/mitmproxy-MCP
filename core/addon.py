@@ -6,9 +6,9 @@ import threading
 from mitmproxy import ctx
 from mitmproxy import http
 
-from .server import ADDON_SUPPORTED_TRANSPORTS
 from .server import mcp
 from .server import run_transport_async
+from .server import SUPPORTED_TRANSPORTS
 
 from .store import flow_store
 
@@ -25,7 +25,7 @@ class MCPFlowCaptureAddon:
             str,
             "streamable-http",
             "Transport for the embedded MCP server.",
-            choices=sorted(ADDON_SUPPORTED_TRANSPORTS),
+            choices=sorted(SUPPORTED_TRANSPORTS),
         )
 
     def running(self) -> None:
@@ -58,7 +58,7 @@ class MCPFlowCaptureAddon:
         )
 
     def _run_mcp_server(self, transport: str) -> None:
-        asyncio.run(run_transport_async(transport, addon_mode=True))
+        asyncio.run(run_transport_async(transport))
 
 
 addons = [MCPFlowCaptureAddon()]
