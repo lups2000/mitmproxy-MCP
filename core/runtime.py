@@ -7,18 +7,22 @@ from mitmproxy.tools.dump import DumpMaster
 
 from .addon import addons as mitm_addons
 from .config import settings
-from .server import mcp
 
 
-async def run_combined() -> None:
-    opts = options.Options(listen_host=settings.proxy_host, listen_port=settings.proxy_port)
+async def run_mitmproxy() -> None:
+    opts = options.Options(
+        listen_host=settings.proxy_host,
+        listen_port=settings.proxy_port,
+    )
     master = DumpMaster(opts, with_termlog=True, with_dumper=False)
     master.addons.add(*mitm_addons)
-
-    async with asyncio.TaskGroup() as task_group:
-        task_group.create_task(master.run())
-        task_group.create_task(mcp.run_streamable_http_async())
+    master.options.update(
+        mcp_host=settings.mcp_host,
+        mcp_port=settings.mcp_port,
+        mcp_transport=settings.mcp_transport,
+    )
+    await master.run()
 
 
 def main() -> None:
-    asyncio.run(run_combined())
+    asyncio.run(run_mitmproxy())
