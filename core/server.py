@@ -101,6 +101,16 @@ def replay_flow(flow_id: str) -> dict:
     return mitmproxy_controller.replay_flow(source_flow)
 
 
+@mcp.tool()
+def duplicate_flow(flow_id: str) -> dict:
+    """Duplicate a captured flow in memory without sending it."""
+    duplicated_flow = flow_store.duplicate_flow(flow_id)
+    if duplicated_flow is None:
+        raise ValueError(f"Unknown flow_id: {flow_id}")
+
+    return duplicated_flow
+
+
 async def run_transport_async(transport: str) -> None:
     _validate_transport(transport)
 

@@ -5,6 +5,7 @@ from dataclasses import asdict
 from datetime import UTC, datetime
 import threading
 from typing import Any
+import uuid
 
 from mitmproxy import http
 
@@ -75,6 +76,29 @@ class FlowStore:
         with self._lock:
             flow = self._source_flows.get(flow_id)
             return flow.copy() if flow else None
+
+    def duplicate_flow(self, flow_id: str) -> dict[str, Any] | None:
+        with self._lock:
+            source_flow = self._source_flows.get(flow_id)
+            if source_flow is None:
+                return None
+
+            duplicated_flow = source_flow.copy()
+            duplicated_flow.id = str(uuid.uuid4())
+            duplicated_detail = self._normalize_flow(duplicated_flow)
+
+            self._flows[duplicated_detail.id] = duplicated_detail
+            self._source_flows[duplicated_detail.id] = duplicated_flow.copy()
+
+            if len(self._flows) > self.max_flows:
+                oldest_flow_id, _ = self._flows.popitem(last=False)
+                self._source_flows.pop(oldest_flow_id, None)
+
+            return {
+                "source_flow_id": flow_id,
+                "duplicated_flow_id": duplicated_detail.id,
+                "flow": asdict(duplicated_detail),
+            }
 
     def get_flow_count(
         self,
