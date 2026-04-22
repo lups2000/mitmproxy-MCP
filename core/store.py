@@ -100,6 +100,16 @@ class FlowStore:
                 "flow": asdict(duplicated_detail),
             }
 
+    def delete_flow(self, flow_id: str) -> dict[str, Any] | None:
+        with self._lock:
+            flow = self._flows.pop(flow_id, None)
+            self._source_flows.pop(flow_id, None)
+
+            if flow is None:
+                return None
+
+            return {"flow_id": flow_id, "deleted": True}
+
     def get_flow_count(
         self,
         marked: bool | None = None,

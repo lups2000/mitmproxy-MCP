@@ -92,6 +92,16 @@ def clear_captured_flows() -> dict[str, int]:
 
 
 @mcp.tool()
+def delete_flow(flow_id: str) -> dict:
+    """Delete one captured flow from the local store."""
+    deleted_flow = flow_store.delete_flow(flow_id)
+    if deleted_flow is None:
+        raise ValueError(f"Unknown flow_id: {flow_id}")
+
+    return deleted_flow
+
+
+@mcp.tool()
 def replay_flow(flow_id: str) -> dict:
     """Replay a previously captured flow through mitmproxy's client replay support."""
     source_flow = flow_store.get_source_flow(flow_id)
