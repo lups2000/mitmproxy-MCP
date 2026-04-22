@@ -2,6 +2,7 @@ from mcp.server.fastmcp import FastMCP
 
 from .config import settings
 from .control import mitmproxy_controller
+from .markers import normalize_marker
 from .store import flow_store
 
 SUPPORTED_TRANSPORTS = {"sse", "streamable-http"}
@@ -73,15 +74,16 @@ def list_marked_flows(limit: int = 20, offset: int = 0) -> list[dict]:
 
 
 @mcp.tool()
-def mark_flow(flow_id: str) -> dict | None:
-    """Mark a flow as interesting for later investigation."""
-    return flow_store.mark_flow(flow_id)
+def mark_flow(flow_id: str, marker: str = "red") -> dict:
+    """Mark a flow in mitmproxy. Marker can be a color name like 'blue' or a mitmproxy marker string."""
+    normalized_marker = normalize_marker(marker)
+    return mitmproxy_controller.set_flow_marker(flow_id, normalized_marker)
 
 
 @mcp.tool()
 def unmark_flow(flow_id: str) -> dict | None:
     """Remove the marked flag from a flow."""
-    return flow_store.unmark_flow(flow_id)
+    return mitmproxy_controller.set_flow_marker(flow_id, "")
 
 
 @mcp.tool()

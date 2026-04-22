@@ -26,7 +26,7 @@ class FlowStore:
 
     def add_from_mitmproxy_flow(self, flow: http.HTTPFlow) -> FlowDetail:
         flow_detail = self._normalize_flow(flow)
-        source_flow = flow.copy()
+        source_flow = _copy_flow_preserving_id(flow)
 
         with self._lock:
             # Preserve insertion order while allowing O(1) lookup by flow id.
@@ -75,7 +75,7 @@ class FlowStore:
     def get_source_flow(self, flow_id: str) -> http.HTTPFlow | None:
         with self._lock:
             flow = self._source_flows.get(flow_id)
-            return flow.copy() if flow else None
+            return _copy_flow_preserving_id(flow) if flow else None
 
     def duplicate_flow(self, flow_id: str) -> dict[str, Any] | None:
         with self._lock:
@@ -131,24 +131,6 @@ class FlowStore:
                 )
             )
 
-    def mark_flow(self, flow_id: str) -> dict[str, Any] | None:
-        with self._lock:
-            flow = self._flows.get(flow_id)
-            if flow is None:
-                return None
-
-            flow.marked = True
-            return {"flow_id": flow_id, "marked": True}
-
-    def unmark_flow(self, flow_id: str) -> dict[str, Any] | None:
-        with self._lock:
-            flow = self._flows.get(flow_id)
-            if flow is None:
-                return None
-
-            flow.marked = False
-            return {"flow_id": flow_id, "marked": False}
-
     def get_flow_request(self, flow_id: str) -> dict[str, Any] | None:
         with self._lock:
             flow = self._flows.get(flow_id)
@@ -195,6 +177,22 @@ class FlowStore:
             self._flows.clear()
             self._source_flows.clear()
             return deleted_count
+
+    def remove_flow(self, flow_id: str) -> None:
+        with self._lock:
+            self._flows.pop(flow_id, None)
+            self._source_flows.pop(flow_id, None)
+
+    def replace_from_mitmproxy_flows(self, flows: list[http.HTTPFlow]) -> None:
+        normalized_flows = [(_copy_flow_preserving_id(flow), self._normalize_flow(flow)) for flow in flows]
+
+        with self._lock:
+            self._flows.clear()
+            self._source_flows.clear()
+
+            for source_flow, flow_detail in normalized_flows[-self.max_flows :]:
+                self._flows[flow_detail.id] = flow_detail
+                self._source_flows[flow_detail.id] = source_flow
 
     def _filter_flows(
         self,
@@ -267,7 +265,8 @@ class FlowStore:
             response_headers=redacted_response_headers,
             request_body_preview=request_body_preview,
             response_body_preview=response_body_preview,
-            marked=False,
+            marked=bool(flow.marked),
+            marker=flow.marked or None,
         )
 
     def _to_summary(self, flow: FlowDetail) -> FlowSummary:
@@ -288,6 +287,7 @@ class FlowStore:
             request_body_size=flow.request_body_size,
             response_body_size=flow.response_body_size,
             marked=flow.marked,
+            marker=flow.marker,
         )
 
     def _build_redacted_url(self, flow: http.HTTPFlow, redacted_query: str) -> str:
@@ -305,3 +305,9 @@ def _preview_bytes(data: bytes | None, limit: int = settings.body_preview_limit)
         return ""
 
     return data[:limit].decode("utf-8", errors="replace")
+
+
+def _copy_flow_preserving_id(flow: http.HTTPFlow) -> http.HTTPFlow:
+    copied_flow = flow.copy()
+    copied_flow.id = flow.id
+    return copied_flow
