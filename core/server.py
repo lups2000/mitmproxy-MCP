@@ -88,19 +88,14 @@ def unmark_flow(flow_id: str) -> dict | None:
 
 @mcp.tool()
 def clear_captured_flows() -> dict[str, int]:
-    """Delete all captured flows from the local store."""
-    deleted_count = flow_store.clear()
-    return {"deleted_count": deleted_count}
+    """Delete all captured flows from mitmproxy's real view/store."""
+    return mitmproxy_controller.clear_flows()
 
 
 @mcp.tool()
 def delete_flow(flow_id: str) -> dict:
-    """Delete one captured flow from the local store."""
-    deleted_flow = flow_store.delete_flow(flow_id)
-    if deleted_flow is None:
-        raise ValueError(f"Unknown flow_id: {flow_id}")
-
-    return deleted_flow
+    """Delete one captured flow from mitmproxy's real view/store."""
+    return mitmproxy_controller.delete_flow(flow_id)
 
 
 @mcp.tool()
@@ -115,12 +110,8 @@ def replay_flow(flow_id: str) -> dict:
 
 @mcp.tool()
 def duplicate_flow(flow_id: str) -> dict:
-    """Duplicate a captured flow in memory without sending it."""
-    duplicated_flow = flow_store.duplicate_flow(flow_id)
-    if duplicated_flow is None:
-        raise ValueError(f"Unknown flow_id: {flow_id}")
-
-    return duplicated_flow
+    """Duplicate a captured flow in mitmproxy's real view/store without sending it."""
+    return mitmproxy_controller.duplicate_flow(flow_id)
 
 
 async def run_transport_async(transport: str) -> None:
