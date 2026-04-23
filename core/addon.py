@@ -51,22 +51,6 @@ class MCPFlowCaptureAddon:
 
         ctx.log.info(f"MCP server started on {ctx.options.mcp_host}:{ctx.options.mcp_port} via {transport}")
 
-    def response(self, flow: http.HTTPFlow) -> None:
-        normalized_flow = flow_store.add_from_mitmproxy_flow(flow)
-        ctx.log.info(f"Captured flow {normalized_flow.id} {normalized_flow.method} {normalized_flow.url}")
-
-    def error(self, flow: http.HTTPFlow) -> None:
-        normalized_flow = flow_store.add_from_mitmproxy_flow(flow)
-        ctx.log.info(
-            f"Captured errored flow {normalized_flow.id} {normalized_flow.method} {normalized_flow.url}: "
-            f"{normalized_flow.error_message}"
-        )
-
-    def update(self, flows) -> None:
-        for flow in flows:
-            if isinstance(flow, http.HTTPFlow):
-                flow_store.add_from_mitmproxy_flow(flow)
-
     def _run_mcp_server(self, transport: str) -> None:
         asyncio.run(run_transport_async(transport))
 
