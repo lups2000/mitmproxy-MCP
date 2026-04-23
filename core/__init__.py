@@ -1,4 +1,4 @@
 from .config import Settings
-from .store import FlowStore, flow_store
+from .store import FlowProjectionStore, flow_projection_store
 
-__all__ = ["FlowStore", "Settings", "flow_store"]
+__all__ = ["FlowProjectionStore", "Settings", "flow_projection_store"]

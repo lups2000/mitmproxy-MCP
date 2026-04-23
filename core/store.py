@@ -16,30 +16,24 @@ from .privacy import redact_headers
 from .privacy import redact_query_items
 
 
-class FlowStore:
+class FlowProjectionStore:
     def __init__(self, max_flows: int = settings.max_flows) -> None:
         self.max_flows = max_flows
         self._lock = threading.RLock()
         self._flows: OrderedDict[str, FlowDetail] = OrderedDict()
-        self._source_flows: OrderedDict[str, http.HTTPFlow] = OrderedDict()
 
     def add_from_mitmproxy_flow(self, flow: http.HTTPFlow) -> FlowDetail:
         flow_detail = self._normalize_flow(flow)
-        source_flow = _copy_flow_preserving_id(flow)
 
         with self._lock:
             # Preserve insertion order while allowing O(1) lookup by flow id.
             if flow_detail.id in self._flows:
                 del self._flows[flow_detail.id]
-            if flow_detail.id in self._source_flows:
-                del self._source_flows[flow_detail.id]
 
             self._flows[flow_detail.id] = flow_detail
-            self._source_flows[flow_detail.id] = source_flow
 
             if len(self._flows) > self.max_flows:
-                oldest_flow_id, _ = self._flows.popitem(last=False)
-                self._source_flows.pop(oldest_flow_id, None)
+                self._flows.popitem(last=False)
 
             return flow_detail
 
@@ -70,11 +64,6 @@ class FlowStore:
         with self._lock:
             flow = self._flows.get(flow_id)
             return asdict(flow) if flow else None
-
-    def get_source_flow(self, flow_id: str) -> http.HTTPFlow | None:
-        with self._lock:
-            flow = self._source_flows.get(flow_id)
-            return _copy_flow_preserving_id(flow) if flow else None
 
     def get_flow_count(
         self,
@@ -141,24 +130,20 @@ class FlowStore:
         with self._lock:
             deleted_count = len(self._flows)
             self._flows.clear()
-            self._source_flows.clear()
             return deleted_count
 
     def remove_flow(self, flow_id: str) -> None:
         with self._lock:
             self._flows.pop(flow_id, None)
-            self._source_flows.pop(flow_id, None)
 
     def replace_from_mitmproxy_flows(self, flows: list[http.HTTPFlow]) -> None:
-        normalized_flows = [(_copy_flow_preserving_id(flow), self._normalize_flow(flow)) for flow in flows]
+        normalized_flows = [self._normalize_flow(flow) for flow in flows]
 
         with self._lock:
             self._flows.clear()
-            self._source_flows.clear()
 
-            for source_flow, flow_detail in normalized_flows[-self.max_flows :]:
+            for flow_detail in normalized_flows[-self.max_flows :]:
                 self._flows[flow_detail.id] = flow_detail
-                self._source_flows[flow_detail.id] = source_flow
 
     def _filter_flows(
         self,
@@ -263,7 +248,7 @@ class FlowStore:
         return f"{flow.request.scheme}://{flow.request.host}{port_part}{flow.request.path}{query_part}"
 
 
-flow_store = FlowStore()
+flow_projection_store = FlowProjectionStore()
 
 
 def _preview_bytes(data: bytes | None, limit: int = settings.body_preview_limit) -> str:
@@ -272,8 +257,3 @@ def _preview_bytes(data: bytes | None, limit: int = settings.body_preview_limit)
 
     return data[:limit].decode("utf-8", errors="replace")
 
-
-def _copy_flow_preserving_id(flow: http.HTTPFlow) -> http.HTTPFlow:
-    copied_flow = flow.copy()
-    copied_flow.id = flow.id
-    return copied_flow

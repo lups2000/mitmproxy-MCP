@@ -3,7 +3,7 @@ from mcp.server.fastmcp import FastMCP
 from .config import settings
 from .control import mitmproxy_controller
 from .markers import normalize_marker
-from .store import flow_store
+from .store import flow_projection_store
 
 SUPPORTED_TRANSPORTS = {"sse", "streamable-http"}
 
@@ -27,7 +27,7 @@ def list_captured_flows(
     path_contains: str | None = None,
     ) -> list[dict]:
     """List compact summaries for captured HTTP flows, with optional filters."""
-    return flow_store.list_flows(
+    return flow_projection_store.list_flows(
         limit=limit,
         offset=offset,
         marked=None,
@@ -42,7 +42,7 @@ def list_captured_flows(
 @mcp.tool()
 def get_captured_flow(flow_id: str) -> dict | None:
     """Fetch a full detailed flow by its mitmproxy flow id."""
-    return flow_store.get_flow(flow_id)
+    return flow_projection_store.get_flow(flow_id)
 
 
 @mcp.tool()
@@ -56,7 +56,7 @@ def get_flow_count(
 ) -> dict[str, int]:
     """Count captured flows, optionally with the same filters as the list tool."""
     return {
-        "count": flow_store.get_flow_count(
+        "count": flow_projection_store.get_flow_count(
             marked=marked,
             error_only=error_only,
             host=host,
@@ -70,7 +70,7 @@ def get_flow_count(
 @mcp.tool()
 def list_marked_flows(limit: int = 20, offset: int = 0) -> list[dict]:
     """List only flows that have been marked."""
-    return flow_store.list_flows(limit=limit, offset=offset, marked=True, error_only=False)
+    return flow_projection_store.list_flows(limit=limit, offset=offset, marked=True, error_only=False)
 
 
 @mcp.tool()
@@ -101,11 +101,7 @@ def delete_flow(flow_id: str) -> dict:
 @mcp.tool()
 def replay_flow(flow_id: str) -> dict:
     """Replay a previously captured flow through mitmproxy's client replay support."""
-    source_flow = flow_store.get_source_flow(flow_id)
-    if source_flow is None:
-        raise ValueError(f"Unknown flow_id: {flow_id}")
-
-    return mitmproxy_controller.replay_flow(source_flow)
+    return mitmproxy_controller.replay_flow(flow_id)
 
 
 @mcp.tool()

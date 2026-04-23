@@ -20,18 +20,17 @@ class MitmproxyController:
     def detach_master(self) -> None:
         self._master = None
 
-    def replay_flow(self, flow: http.HTTPFlow) -> dict[str, Any]:
+    def replay_flow(self, flow_id: str) -> dict[str, Any]:
         master = self._require_master()
         result: Future[dict[str, Any]] = Future()
 
         def _enqueue_replay() -> None:
             try:
-                replay_flow = flow.copy()
-                master.commands.call("replay.client", [replay_flow])
+                flow = self._resolve_http_flow(master, flow_id)
+                master.commands.call("replay.client", [flow])
                 result.set_result(
                     {
                         "flow_id": flow.id,
-                        "replay_flow_id": replay_flow.id,
                         "queued": True,
                     }
                 )

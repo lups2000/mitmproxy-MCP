@@ -11,7 +11,7 @@ from .server import mcp
 from .server import run_transport_async
 from .server import SUPPORTED_TRANSPORTS
 
-from .store import flow_store
+from .store import flow_projection_store
 
 
 class MCPFlowCaptureAddon:
@@ -85,28 +85,28 @@ class MCPFlowCaptureAddon:
 
     def _sync_from_mitmproxy_view(self) -> None:
         if self._view is None:
-            flow_store.replace_from_mitmproxy_flows([])
+            flow_projection_store.replace_from_mitmproxy_flows([])
             return
 
         http_flows = [flow for flow in self._view._store.values() if isinstance(flow, http.HTTPFlow)]
-        flow_store.replace_from_mitmproxy_flows(http_flows)
+        flow_projection_store.replace_from_mitmproxy_flows(http_flows)
 
     def _handle_view_add(self, flow) -> None:
         if isinstance(flow, http.HTTPFlow):
-            flow_store.add_from_mitmproxy_flow(flow)
+            flow_projection_store.add_from_mitmproxy_flow(flow)
 
     def _handle_view_update(self, flow) -> None:
         if isinstance(flow, http.HTTPFlow):
-            flow_store.add_from_mitmproxy_flow(flow)
+            flow_projection_store.add_from_mitmproxy_flow(flow)
 
     def _handle_view_remove(self, flow, index) -> None:
-        flow_store.remove_flow(flow.id)
+        flow_projection_store.remove_flow(flow.id)
 
     def _handle_view_refresh(self) -> None:
         self._sync_from_mitmproxy_view()
 
     def _handle_store_remove(self, flow) -> None:
-        flow_store.remove_flow(flow.id)
+        flow_projection_store.remove_flow(flow.id)
 
     def _handle_store_refresh(self) -> None:
         self._sync_from_mitmproxy_view()
