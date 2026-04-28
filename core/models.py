@@ -20,6 +20,7 @@ class FlowSummary:
     response_body_size: int
     marked: bool
     marker: str | None
+    comment: str
 
 
 @dataclass
@@ -48,3 +49,4 @@ class FlowDetail:
     response_body_preview: str
     marked: bool
     marker: str | None
+    comment: str

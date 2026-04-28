@@ -105,6 +105,16 @@ def unmark_flow(flow_id: str) -> dict | None:
 
 
 @mcp.tool()
+def comment_flow(flow_id: str, comment: str) -> dict:
+    """Set or replace the mitmproxy comment on a real flow.
+
+    This updates mitmproxy state and is reflected in mitmweb. Pass an empty
+    string to clear the existing comment.
+    """
+    return mitmproxy_controller.set_flow_comment(flow_id, comment)
+
+
+@mcp.tool()
 def clear_captured_flows() -> dict[str, int]:
     """Clear all flows from mitmproxy's real view/store.
 

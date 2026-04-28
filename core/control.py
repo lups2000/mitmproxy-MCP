@@ -61,6 +61,26 @@ class MitmproxyController:
         master.event_loop.call_soon_threadsafe(_set_mark)
         return result.result(timeout=5)
 
+    def set_flow_comment(self, flow_id: str, comment: str) -> dict[str, Any]:
+        master = self._require_master()
+        result: Future[dict[str, Any]] = Future()
+
+        def _set_comment() -> None:
+            try:
+                flow = self._resolve_http_flow(master, flow_id)
+                master.commands.call("flow.comment", [flow], comment)
+                result.set_result(
+                    {
+                        "flow_id": flow.id,
+                        "comment": flow.comment,
+                    }
+                )
+            except Exception as exc:
+                result.set_exception(exc)
+
+        master.event_loop.call_soon_threadsafe(_set_comment)
+        return result.result(timeout=5)
+
     def clear_flows(self) -> dict[str, int]:
         master = self._require_master()
         result: Future[dict[str, int]] = Future()

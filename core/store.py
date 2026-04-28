@@ -172,6 +172,7 @@ class FlowProjectionStore:
             response_body_preview=response_body_preview,
             marked=bool(flow.marked),
             marker=flow.marked or None,
+            comment=flow.comment,
         )
 
     def _to_summary(self, flow: FlowDetail) -> FlowSummary:
@@ -193,6 +194,7 @@ class FlowProjectionStore:
             response_body_size=flow.response_body_size,
             marked=flow.marked,
             marker=flow.marker,
+            comment=flow.comment,
         )
 
     def _build_redacted_url(self, flow: http.HTTPFlow, redacted_query: str) -> str:
