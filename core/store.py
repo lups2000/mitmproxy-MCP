@@ -86,12 +86,6 @@ class FlowProjectionStore:
                 )
             )
 
-    def clear(self) -> int:
-        with self._lock:
-            deleted_count = len(self._flows)
-            self._flows.clear()
-            return deleted_count
-
     def remove_flow(self, flow_id: str) -> None:
         with self._lock:
             self._flows.pop(flow_id, None)
