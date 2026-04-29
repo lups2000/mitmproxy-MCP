@@ -81,6 +81,93 @@ class MitmproxyController:
         master.event_loop.call_soon_threadsafe(_set_comment)
         return result.result(timeout=5)
 
+    def set_intercept(self, flow_filter: str, active: bool = True) -> dict[str, Any]:
+        master = self._require_master()
+        result: Future[dict[str, Any]] = Future()
+
+        def _set_intercept() -> None:
+            try:
+                if active:
+                    master.commands.call("set", "intercept", flow_filter)
+                    master.commands.call("set", "intercept_active", "true")
+                else:
+                    master.commands.call("set", "intercept_active", "false")
+                    master.commands.call("set", "intercept")
+
+                result.set_result(
+                    {
+                        "active": bool(master.options.intercept_active),
+                        "filter": master.options.intercept,
+                    }
+                )
+            except Exception as exc:
+                result.set_exception(exc)
+
+        master.event_loop.call_soon_threadsafe(_set_intercept)
+        return result.result(timeout=5)
+
+    def resume_flow(self, flow_id: str) -> dict[str, Any]:
+        master = self._require_master()
+        result: Future[dict[str, Any]] = Future()
+
+        def _resume_flow() -> None:
+            try:
+                flow = self._resolve_http_flow(master, flow_id)
+                was_intercepted = flow.intercepted
+                master.commands.call("flow.resume", [flow])
+                result.set_result(
+                    {
+                        "flow_id": flow.id,
+                        "resumed": was_intercepted and not flow.intercepted,
+                        "intercepted": flow.intercepted,
+                    }
+                )
+            except Exception as exc:
+                result.set_exception(exc)
+
+        master.event_loop.call_soon_threadsafe(_resume_flow)
+        return result.result(timeout=5)
+
+    def resume_all_flows(self) -> dict[str, int]:
+        master = self._require_master()
+        result: Future[dict[str, int]] = Future()
+
+        def _resume_all_flows() -> None:
+            try:
+                flows = self._resolve_http_flows(master, "@all")
+                intercepted_flows = [flow for flow in flows if flow.intercepted]
+                master.commands.call("flow.resume", intercepted_flows)
+                resumed_count = sum(1 for flow in intercepted_flows if not flow.intercepted)
+                result.set_result({"resumed_count": resumed_count})
+            except Exception as exc:
+                result.set_exception(exc)
+
+        master.event_loop.call_soon_threadsafe(_resume_all_flows)
+        return result.result(timeout=5)
+
+    def kill_flow(self, flow_id: str) -> dict[str, Any]:
+        master = self._require_master()
+        result: Future[dict[str, Any]] = Future()
+
+        def _kill_flow() -> None:
+            try:
+                flow = self._resolve_http_flow(master, flow_id)
+                was_intercepted = flow.intercepted
+                master.commands.call("flow.kill", [flow])
+                result.set_result(
+                    {
+                        "flow_id": flow.id,
+                        "killed": was_intercepted and flow.error is not None,
+                        "intercepted": flow.intercepted,
+                        "error_message": flow.error.msg if flow.error is not None else None,
+                    }
+                )
+            except Exception as exc:
+                result.set_exception(exc)
+
+        master.event_loop.call_soon_threadsafe(_kill_flow)
+        return result.result(timeout=5)
+
     def clear_flows(self) -> dict[str, int]:
         master = self._require_master()
         result: Future[dict[str, int]] = Future()

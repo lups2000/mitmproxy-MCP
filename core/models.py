@@ -14,6 +14,7 @@ class FlowSummary:
     response_reason: str | None
     has_error: bool
     error_message: str | None
+    intercepted: bool
     request_content_type: str
     response_content_type: str
     request_body_size: int
@@ -39,6 +40,7 @@ class FlowDetail:
     response_reason: str | None
     has_error: bool
     error_message: str | None
+    intercepted: bool
     request_content_type: str
     response_content_type: str
     request_body_size: int

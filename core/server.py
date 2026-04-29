@@ -87,6 +87,18 @@ def list_marked_flows(limit: int = 20, offset: int = 0) -> list[dict]:
 
 
 @mcp.tool()
+def get_intercepted_flows(limit: int = 20, offset: int = 0) -> list[dict]:
+    """List redacted summaries for flows that are currently intercepted."""
+    return flow_projection_store.list_flows(
+        limit=limit,
+        offset=offset,
+        marked=None,
+        intercepted=True,
+        error_only=False,
+    )
+
+
+@mcp.tool()
 def mark_flow(flow_id: str, marker: str = "red") -> dict:
     """Set a mitmproxy marker on a real flow.
 
@@ -112,6 +124,34 @@ def comment_flow(flow_id: str, comment: str) -> dict:
     string to clear the existing comment.
     """
     return mitmproxy_controller.set_flow_comment(flow_id, comment)
+
+
+@mcp.tool()
+def set_intercept(flow_filter: str, active: bool = True) -> dict:
+    """Enable or disable mitmproxy interception using a mitmproxy filter expression.
+
+    When active is true, flow_filter should be a valid mitmproxy filter such as
+    ~u example.com or ~m POST. When active is false, interception is disabled.
+    """
+    return mitmproxy_controller.set_intercept(flow_filter, active)
+
+
+@mcp.tool()
+def resume_flow(flow_id: str) -> dict:
+    """Resume a real flow if it is currently intercepted."""
+    return mitmproxy_controller.resume_flow(flow_id)
+
+
+@mcp.tool()
+def resume_all() -> dict[str, int]:
+    """Resume all currently intercepted HTTP flows."""
+    return mitmproxy_controller.resume_all_flows()
+
+
+@mcp.tool()
+def kill_flow(flow_id: str) -> dict:
+    """Kill a real live flow if mitmproxy still considers it killable."""
+    return mitmproxy_controller.kill_flow(flow_id)
 
 
 @mcp.tool()

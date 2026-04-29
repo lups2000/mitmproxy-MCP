@@ -42,6 +42,7 @@ class FlowProjectionStore:
         limit: int = 20,
         offset: int = 0,
         marked: bool | None = None,
+        intercepted: bool | None = None,
         error_only: bool = False,
         host: str | None = None,
         method: str | None = None,
@@ -51,6 +52,7 @@ class FlowProjectionStore:
         with self._lock:
             matching_flows = self._filter_flows(
                 marked=marked,
+                intercepted=intercepted,
                 error_only=error_only,
                 host=host,
                 method=method,
@@ -68,6 +70,7 @@ class FlowProjectionStore:
     def get_flow_count(
         self,
         marked: bool | None = None,
+        intercepted: bool | None = None,
         error_only: bool = False,
         host: str | None = None,
         method: str | None = None,
@@ -78,6 +81,7 @@ class FlowProjectionStore:
             return len(
                 self._filter_flows(
                     marked=marked,
+                    intercepted=intercepted,
                     error_only=error_only,
                     host=host,
                     method=method,
@@ -102,6 +106,7 @@ class FlowProjectionStore:
     def _filter_flows(
         self,
         marked: bool | None = None,
+        intercepted: bool | None = None,
         error_only: bool = False,
         host: str | None = None,
         method: str | None = None,
@@ -113,6 +118,9 @@ class FlowProjectionStore:
 
         for flow in self._flows.values():
             if marked is not None and flow.marked != marked:
+                continue
+
+            if intercepted is not None and flow.intercepted != intercepted:
                 continue
 
             if error_only:
@@ -162,6 +170,7 @@ class FlowProjectionStore:
             response_reason=response.reason if response else None,
             has_error=flow.error is not None,
             error_message=flow.error.msg if flow.error is not None else None,
+            intercepted=flow.intercepted,
             request_content_type=redacted_request_headers.get("content-type", ""),
             response_content_type=redacted_response_headers.get("content-type", ""),
             request_body_size=len(flow.request.content or b""),
@@ -188,6 +197,7 @@ class FlowProjectionStore:
             response_reason=flow.response_reason,
             has_error=flow.has_error,
             error_message=flow.error_message,
+            intercepted=flow.intercepted,
             request_content_type=flow.request_content_type,
             response_content_type=flow.response_content_type,
             request_body_size=flow.request_body_size,
