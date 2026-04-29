@@ -1,179 +1,325 @@
 # mitmproxy MCP
 
-This project is a Python-based MCP server for inspecting HTTP traffic captured through mitmproxy.
+`mitmproxy-mcp` is an MCP server embedded inside `mitmproxy`.
 
-## Roadmap
+The project goal is not just "capture traffic and expose it over MCP". The goal is:
 
-### M1 Foundation Refactor
+> make `mitmproxy` available to agents the same way `mitmweb` makes it available to humans.
 
-Goal: turn the current prototype scripts into a small, coherent package.
+That means:
 
-Scope:
-- move code into a package, for example `mitmproxy_mcp/`
-- split responsibilities into:
-  - `config.py`
-  - `models.py`
-  - `store.py`
-  - `addon.py`
-  - `server.py`
-  - `runtime.py`
-- remove hardcoded runtime values from the current runner
-- define a central settings object for proxy host/port, MCP host/port, transport, retention limits, and preview sizes
+- `mitmproxy` is the source of truth
+- MCP tools act on real `mitmproxy` state
+- the MCP server exposes a redacted read model for safe inspection
+- changes made from MCP are reflected in `mitmproxy`
+- changes made from `mitmproxy` are reflected in MCP
 
-Success criteria:
-- same behavior as today
-- same manual test still works
-- codebase is easier to extend
+## What This Server Does
 
-### M2 Better Flow Models
+This server lets an MCP client:
 
-Goal: define clean data contracts for captured traffic.
+- inspect HTTP flows currently present in `mitmproxy`
+- filter, count, and fetch detailed flow data
+- mark and comment flows
+- duplicate, replay, delete, clear, revert, kill, and resume flows
+- configure interception rules and inspect intercepted flows
 
-Scope:
-- separate `FlowSummary` from `FlowDetail`
-- keep normalization in one place
-- make list tools return summaries instead of full records
-- keep detailed headers/body previews in detail views only
-- add explicit truncation metadata where useful
+It is intentionally **addon-first**:
 
-Success criteria:
-- `list_flows` is compact and useful
-- `get_flow` is richer and more structured
-- normalized models feel deliberate, not accidental
+- run it by loading the addon into `mitmproxy` / `mitmweb` / `mitmdump`
+- do not run it as a standalone `stdio` MCP server
 
-### M3 Queryable Store
+## Architecture
 
-Goal: make the in-memory store behave like a real repository.
+The current architecture has three important parts:
 
-Scope:
-- filtering by host, method, status code, and path substring
-- limit/offset or similar pagination
-- recent-first ordering
-- retention controls for max flow count and body preview size
+### 1. mitmproxy real state
 
-Success criteria:
-- an agent can find interesting flows without dumping everything
+`mitmproxy` owns the real flows, interception state, replay behavior, comments, markers, and runtime options.
 
-### M4 Privacy And Redaction
+All write tools are designed to operate on this real state.
 
-Goal: avoid exposing secrets to MCP clients by default.
+### 2. FlowProjectionStore
 
-Scope:
-- redact sensitive headers like `authorization`, `cookie`, `set-cookie`, and common API key headers
-- redact sensitive query parameters
-- basic body redaction for obvious secrets
-- configurable redaction policy with safe defaults
+The MCP server does **not** expose raw `mitmproxy` flow objects directly.
 
-Success criteria:
-- sensitive data is masked in list/detail tools by default
-- redaction behavior is testable and configurable
+Instead, it maintains a redacted projection:
 
-### M5 Improved MCP Tool Surface
+- normalized summaries and details
+- redacted headers
+- redacted query parameters
+- redacted body previews
+- filtering and pagination support
 
-Goal: make the server genuinely useful to an agent.
+This projection is a **read model**, not a second source of truth.
 
-Scope:
-- inspection tools such as:
-  - `list_flows`
-  - `get_flow`
-  - `clear_flows`
-  - `find_flows`
-  - `get_recent_flows`
-  - `get_flow_request`
-  - `get_flow_response`
-- return compact summaries from list/search tools
-- keep detail tools focused and predictable
+### 3. MitmproxyController
 
-Success criteria:
-- common traffic investigation tasks can be done with a few tool calls
+State-changing MCP tools go through a controller that calls native `mitmproxy` commands on the real event loop.
 
-### M6 Stronger Mitmproxy Integration
+Examples:
 
-Goal: behave more like a true mitmproxy-native extension.
+- `mark_flow` -> native `flow.mark`
+- `delete_flow` -> native `view.flows.remove`
+- `clear_captured_flows` -> native `view.clear`
+- `duplicate_flow` -> native `view.flows.duplicate`
+- `replay_flow` -> native `replay.client`
 
-Scope:
-- decide which lifecycle events to capture, such as completed responses and errored flows
-- improve logging and runtime behavior inside mitmproxy
-- reuse mitmproxy features where practical
-- decide the official startup model
+### Sync model
 
-Success criteria:
-- runtime behavior is intentional and documented
-- edge cases like failed responses are handled explicitly
+The MCP projection is kept in sync from `mitmproxy`'s real view/store signals.
 
-### M7 Transport And Client Compatibility
+So the effective model is:
 
-Goal: make it easy to use from real MCP hosts.
+```text
+mitmproxy real state
+  -> view/store signals
+  -> FlowProjectionStore
+  -> MCP read tools
+```
 
-Scope:
-- keep one transport solid first
-- then add or configure:
-  - `stdio`
-  - `sse`
-  - streamable HTTP
-- document exact connection instructions for common clients
-- make transport selectable through config
+and:
 
-Success criteria:
-- at least two transport modes work reliably
-- docs show exactly how to connect
+```text
+MCP write tools
+  -> MitmproxyController
+  -> mitmproxy real state
+```
 
-### M8 Packaging And CLI
+## Requirements
 
-Goal: make the project installable and runnable like a real tool.
+- Python `>= 3.12`
+- `uv`
 
-Scope:
-- define package entry points in `pyproject.toml`
-- add CLI commands such as `mitmproxy-mcp`
-- clean README with install, run, and connect examples
-- support addon loading in a more standard mitmproxy way if appropriate
+Dependencies:
 
-Success criteria:
-- a new user can install and run it without reading source code
+- `mitmproxy >= 12.2.1`
+- `mcp >= 1.27.0`
 
-### M9 Testing And Hardening
+## Setup
 
-Goal: make changes safe and confidence-building.
+Create the environment and install dependencies:
 
-Scope:
-- unit tests for normalization, filtering, redaction, and tool outputs
-- integration tests for capturing a flow and inspecting it via MCP
-- runtime tests for startup, shutdown, and empty-store behavior
+```bash
+uv sync
+```
 
-Success criteria:
-- core functionality is covered by automated tests
-- regressions become harder to introduce
+If you prefer to activate the local environment:
 
-### M10 Advanced Features
+```bash
+source .venv/bin/activate
+```
 
-Goal: close the gap with richer implementations once the core is stable.
+## Running The Server
 
-Potential scope:
-- replay flow
-- delete one flow
-- export flows
-- interception control
-- runtime config tools
-- richer search and analytics
+### Recommended: mitmweb
 
-## Priority Order
+This is the best mode for development because you can use both:
 
-1. `M1 Foundation Refactor`
-2. `M2 Better Flow Models`
-3. `M3 Queryable Store`
-4. `M4 Privacy And Redaction`
-5. `M5 Improved MCP Tool Surface`
-6. `M6 Stronger Mitmproxy Integration`
-7. `M7 Transport And Client Compatibility`
-8. `M8 Packaging And CLI`
-9. `M9 Testing And Hardening`
-10. `M10 Advanced Features`
+- `mitmweb` as the human UI
+- MCP as the agent UI
 
-## Working Principles
+Start it with:
 
-- Do not optimize for feature count before data model quality.
-- Do not expose raw secrets to MCP clients.
-- Do not let list tools become noisy dumps.
-- Prefer summary tools for navigation and detail tools for drill-down.
-- Reuse mitmproxy’s model where it helps, not just its events.
-- Keep every milestone manually testable.
+```bash
+.venv/bin/mitmweb -s addon.py --set mcp_transport=streamable-http --set mcp_port=8000
+```
+
+By default:
+
+- proxy listens on `127.0.0.1:8080`
+- `mitmweb` listens on `http://127.0.0.1:8081`
+- MCP listens on `127.0.0.1:8000`
+
+### mitmdump
+
+If you want a headless proxy plus MCP server:
+
+```bash
+.venv/bin/mitmdump -s addon.py --set mcp_transport=streamable-http --set mcp_port=8000
+```
+
+## MCP Transports
+
+Supported MCP transports:
+
+- `streamable-http`
+- `sse`
+
+Not supported:
+
+- standalone `stdio`
+
+### streamable-http
+
+Default and recommended.
+
+Run with:
+
+```bash
+.venv/bin/mitmweb -s addon.py --set mcp_transport=streamable-http --set mcp_port=8000
+```
+
+Connect your MCP client to:
+
+```text
+http://127.0.0.1:8000/mcp
+```
+
+### SSE
+
+Run with:
+
+```bash
+.venv/bin/mitmweb -s addon.py --set mcp_transport=sse --set mcp_port=8000
+```
+
+Connect your MCP client to:
+
+```text
+http://127.0.0.1:8000/sse
+```
+
+Note:
+
+- some SSE clients internally use the companion messages path managed by the MCP SDK
+- the MCP server exposes that automatically
+- the client typically only needs the main SSE endpoint
+
+## Using MCP Clients
+
+This project works best with MCP clients that support HTTP-based transports:
+
+- clients that support `streamable-http`
+- clients that support `sse`
+
+
+### Important note about stdio-only clients
+
+This project does **not** currently expose a standalone `stdio` server.
+
+So clients that only support `stdio` are not the right fit unless they also support:
+
+- `streamable-http`
+- `sse`
+
+## Configuration
+
+You can configure the project through environment variables.
+
+See `.env.example`:
+
+```dotenv
+MITMPROXY_MCP_PROXY_HOST=127.0.0.1
+MITMPROXY_MCP_PROXY_PORT=8080
+
+MITMPROXY_MCP_MCP_HOST=127.0.0.1
+MITMPROXY_MCP_MCP_PORT=8000
+MITMPROXY_MCP_MCP_TRANSPORT=streamable-http
+
+MITMPROXY_MCP_MAX_FLOWS=1000
+MITMPROXY_MCP_BODY_PREVIEW_LIMIT=200
+
+MITMPROXY_MCP_REDACTION_ENABLED=true
+MITMPROXY_MCP_REDACT_HEADERS=true
+MITMPROXY_MCP_REDACT_QUERY_PARAMS=true
+MITMPROXY_MCP_REDACT_BODY_PREVIEWS=true
+```
+
+### Main settings
+
+- `MITMPROXY_MCP_PROXY_HOST`
+- `MITMPROXY_MCP_PROXY_PORT`
+- `MITMPROXY_MCP_MCP_HOST`
+- `MITMPROXY_MCP_MCP_PORT`
+- `MITMPROXY_MCP_MCP_TRANSPORT`
+- `MITMPROXY_MCP_MAX_FLOWS`
+- `MITMPROXY_MCP_BODY_PREVIEW_LIMIT`
+
+### Redaction settings
+
+- `MITMPROXY_MCP_REDACTION_ENABLED`
+- `MITMPROXY_MCP_REDACT_HEADERS`
+- `MITMPROXY_MCP_REDACT_QUERY_PARAMS`
+- `MITMPROXY_MCP_REDACT_BODY_PREVIEWS`
+
+## Privacy And Redaction
+
+The MCP read model is redacted by default.
+
+Current redaction behavior includes:
+
+- sensitive headers such as `authorization`, `cookie`, `set-cookie`, `proxy-authorization`, API-key style headers
+- sensitive query parameters such as `token`, `access_token`, `refresh_token`, `api_key`, `password`, `secret`, `session`
+- basic JSON body-preview redaction for common secret keys
+
+The purpose is:
+
+- keep `mitmproxy`'s raw state available internally
+- expose safer inspection data to agents
+
+## Current Tools
+
+### Read / inspect
+
+- `list_captured_flows(limit=20, offset=0, error_only=False, host=None, method=None, status_code=None, path_contains=None)`
+  List redacted flow summaries currently present in `mitmproxy`'s view.
+- `get_captured_flow(flow_id)`
+  Get one redacted detailed flow by `mitmproxy` flow id.
+- `get_flow_count(marked=None, error_only=False, host=None, method=None, status_code=None, path_contains=None)`
+  Count flows matching filters.
+- `list_marked_flows(limit=20, offset=0)`
+  List flows with any `mitmproxy` marker set.
+- `get_intercepted_flows(limit=20, offset=0)`
+  List flows currently intercepted.
+
+### Marking / notes
+
+- `mark_flow(flow_id, marker="red")`
+  Set a real `mitmproxy` marker.
+- `unmark_flow(flow_id)`
+  Remove a marker from a real flow.
+- `comment_flow(flow_id, comment)`
+  Set or replace the real `mitmproxy` comment. Pass an empty string to clear it.
+
+### Interception / live control
+
+- `set_intercept(flow_filter, active=True)`
+  Enable or disable interception using a real `mitmproxy` filter expression.
+- `resume_flow(flow_id)`
+  Resume one intercepted flow.
+- `resume_all()`
+  Resume all currently intercepted HTTP flows.
+- `kill_flow(flow_id)`
+  Kill one intercepted/live flow.
+
+### Flow lifecycle / mutation
+
+- `duplicate_flow(flow_id)`
+  Duplicate a real flow in the `mitmproxy` view without sending it.
+- `replay_flow(flow_id)`
+  Replay a real flow using native `mitmproxy` client replay.
+- `revert_flow(flow_id)`
+  Revert a modified flow to its last backed-up `mitmproxy` state.
+- `delete_flow(flow_id)`
+  Delete one real flow from the `mitmproxy` view/store.
+- `clear_captured_flows()`
+  Clear all real flows from the `mitmproxy` view/store.
+
+## Current Status
+
+The project currently has:
+
+- addon-first architecture
+- native `mitmproxy` write/control tools
+- redacted read projection
+- `mitmweb` <-> MCP synchronization
+- `streamable-http` and `sse` support
+
+What is still missing compared with a larger production surface:
+
+- runtime option discovery tools like `list_options`, `get_option`, `set_option`
+- flow field editing tools
+- automated tests
+- fuller README examples for specific MCP hosts
+
