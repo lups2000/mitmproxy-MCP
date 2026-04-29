@@ -2,7 +2,7 @@
 
 `mitmproxy-mcp` is an MCP server embedded inside `mitmproxy`.
 
-The project goal is not just "capture traffic and expose it over MCP". The goal is:
+The project goal is not just "capture traffic and expose it over MCP". The goal (with some limitations) is:
 
 > make `mitmproxy` available to agents the same way `mitmweb` makes it available to humans.
 
@@ -316,7 +316,7 @@ The project currently has:
 - `mitmweb` <-> MCP synchronization
 - `streamable-http` and `sse` support
 
-What is still missing compared with a larger production surface:
+What is still missing:
 
 - runtime option discovery tools like `list_options`, `get_option`, `set_option`
 - flow field editing tools
