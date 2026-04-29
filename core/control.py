@@ -168,6 +168,27 @@ class MitmproxyController:
         master.event_loop.call_soon_threadsafe(_kill_flow)
         return result.result(timeout=5)
 
+    def revert_flow(self, flow_id: str) -> dict[str, Any]:
+        master = self._require_master()
+        result: Future[dict[str, Any]] = Future()
+
+        def _revert_flow() -> None:
+            try:
+                flow = self._resolve_http_flow(master, flow_id)
+                was_modified = flow.modified()
+                master.commands.call("flow.revert", [flow])
+                result.set_result(
+                    {
+                        "flow_id": flow.id,
+                        "reverted": was_modified and not flow.modified(),
+                    }
+                )
+            except Exception as exc:
+                result.set_exception(exc)
+
+        master.event_loop.call_soon_threadsafe(_revert_flow)
+        return result.result(timeout=5)
+
     def clear_flows(self) -> dict[str, int]:
         master = self._require_master()
         result: Future[dict[str, int]] = Future()

@@ -155,6 +155,12 @@ def kill_flow(flow_id: str) -> dict:
 
 
 @mcp.tool()
+def revert_flow(flow_id: str) -> dict:
+    """Revert a modified real flow to its last backed-up mitmproxy state."""
+    return mitmproxy_controller.revert_flow(flow_id)
+
+
+@mcp.tool()
 def clear_captured_flows() -> dict[str, int]:
     """Clear all flows from mitmproxy's real view/store.
 
