@@ -47,6 +47,7 @@ Examples:
 - `mark_flow` should mark the real mitmproxy flow
 - `delete_flow` should delete the real mitmproxy flow
 - `clear_captured_flows` should clear the real mitmproxy view/store
+- `import_flows` should load flows into the real mitmproxy view/store
 - `duplicate_flow` should use real mitmproxy duplication
 - `replay_flow` should use real mitmproxy replay
 - interception tools should use real mitmproxy interception state
@@ -230,6 +231,7 @@ Interception / live control:
 
 Flow lifecycle / mutation:
 
+- `import_flows`
 - `duplicate_flow`
 - `replay_flow`
 - `revert_flow`
@@ -237,6 +239,21 @@ Flow lifecycle / mutation:
 - `clear_captured_flows`
 
 ## Important Behavioral Notes
+
+### Importing flows
+
+`import_flows`:
+
+- accepts HAR files and mitmproxy flow dump files
+- validates the file extension before import
+- validates the file content format before import
+- loads flows into real mitmproxy state, not only into the projection
+
+This matters because imported flows should behave like normal flows already present in mitmproxy:
+
+- they should appear in mitmweb
+- they should be queryable through MCP read tools
+- they should be available to native tools like mark, comment, duplicate, replay, and delete
 
 ### Duplicate vs replay
 
