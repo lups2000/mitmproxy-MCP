@@ -23,7 +23,10 @@ def register_option_tools(mcp: FastMCP) -> None:
         """Set one mitmproxy runtime option by exact name.
 
         This uses mitmproxy's native option parsing and updates the real running
-        instance. Some high-risk options are intentionally blocked through a
-        blacklist.
+        instance. The following high-risk options are intentionally blocked:
+        mode, listen_host, listen_port, ssl_insecure,
+        ssl_verify_upstream_trusted_ca, ssl_verify_upstream_trusted_confdir,
+        client_certs, certs, cert_passphrase, confdir, allow_hosts,
+        ignore_hosts.
         """
         return mitmproxy_controller.set_option(name, value)

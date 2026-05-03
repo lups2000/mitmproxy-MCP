@@ -49,6 +49,7 @@ Examples:
 - `clear_captured_flows` should clear the real mitmproxy view/store
 - `import_flows` should load flows into the real mitmproxy view/store
 - `export_flows` should write flows from the real mitmproxy view/store
+- `list_options`, `get_option`, and `set_option` should operate on the real running mitmproxy option state
 - `duplicate_flow` should use real mitmproxy duplication
 - `replay_flow` should use real mitmproxy replay
 - interception tools should use real mitmproxy interception state
@@ -223,6 +224,12 @@ State / annotation:
 - `unmark_flow`
 - `comment_flow`
 
+Options:
+
+- `list_options`
+- `get_option`
+- `set_option`
+
 Interception / live control:
 
 - `set_intercept`
@@ -266,6 +273,23 @@ This matters because imported flows should behave like normal flows already pres
 - uses mitmproxy view selectors such as `@all`, `@marked`, and `@focus`
 
 This matters because export should reflect the real flows currently present in mitmproxy, not a separate MCP-only representation.
+
+### Runtime options
+
+`list_options`, `get_option`, and `set_option`:
+
+- operate on the real running mitmproxy option state
+- expose option metadata such as type, default, current value, help text, and choices
+- use mitmproxy's native option parsing for updates
+
+`set_option` is intentionally not completely unrestricted. A blacklist blocks some higher-risk options such as:
+
+- bind/mode options
+- TLS trust configuration options
+- certificate path/passphrase options
+- allow/ignore host list options
+
+This keeps the MCP useful for runtime control without immediately exposing the riskiest proxy reconfiguration knobs.
 
 ### Duplicate vs replay
 

@@ -19,6 +19,7 @@ Current capabilities include:
 - export flows to HAR files or mitmproxy flow dumps
 - duplicate, replay, revert, delete, clear, kill, and resume flows
 - configure interception rules and inspect intercepted flows
+- inspect and update mitmproxy runtime options
 
 This project is intentionally **addon-first**:
 
@@ -277,6 +278,15 @@ Current redaction behavior includes:
 - `kill_flow(flow_id)`
   Kill one intercepted/live flow.
 
+### Options
+
+- `list_options(search=None)`
+  List mitmproxy runtime options from the real running instance. Use `search` to narrow by name.
+- `get_option(name)`
+  Get one mitmproxy runtime option by exact name.
+- `set_option(name, value)`
+  Set one mitmproxy runtime option by exact name using mitmproxy's native option parsing. Blocked options: `mode`, `listen_host`, `listen_port`, `ssl_insecure`, `ssl_verify_upstream_trusted_ca`, `ssl_verify_upstream_trusted_confdir`, `client_certs`, `certs`, `cert_passphrase`, `confdir`, `allow_hosts`, `ignore_hosts`.
+
 ### Flow lifecycle / mutation
 
 - `import_flows(path)`
@@ -293,12 +303,3 @@ Current redaction behavior includes:
   Delete one real flow from the `mitmproxy` view/store.
 - `clear_captured_flows()`
   Clear all real flows from the `mitmproxy` view/store.
-
-## Notes
-
-- `import_flows` accepts `.har`, `.mitm`, and `.flow` files.
-- `export_flows` uses `.har` or `.zhar` for HAR export, and otherwise writes a mitmproxy flow dump.
-- imported flows are loaded into real `mitmproxy` state, so they appear in `mitmweb` and through the MCP read tools.
-- `duplicate_flow` creates another flow in `mitmproxy`, but does not send traffic.
-- `replay_flow` replays the current real flow through `mitmproxy`.
-- a broad intercept filter may match both request and response, so a flow can need two resumes
