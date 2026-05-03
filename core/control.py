@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import os
 from concurrent.futures import Future
 from collections.abc import Sequence
 from typing import Any
 from typing import cast
 
+from mitmproxy import exceptions
 from mitmproxy import flow as mitm_flow
 from mitmproxy import http
+from mitmproxy import io as mitm_io
 from mitmproxy.master import Master
 
 
@@ -244,6 +247,43 @@ class MitmproxyController:
 
         master.event_loop.call_soon_threadsafe(_duplicate_flow)
         return result.result(timeout=5)
+
+    def import_flows(self, path: str) -> dict[str, Any]:
+        master = self._require_master()
+        result: Future[dict[str, Any]] = Future()
+
+        def _import_flows() -> None:
+            try:
+                expanded_path = os.path.expanduser(path)
+                view = master.addons.get("view")
+                if view is None:
+                    raise RuntimeError("mitmproxy view addon is unavailable, so flow import cannot run.")
+
+                imported_count = 0
+                skipped_count = 0
+
+                with open(expanded_path, "rb") as flow_file:
+                    for imported_flow in mitm_io.FlowReader(flow_file).stream():
+                        if isinstance(imported_flow, http.HTTPFlow):
+                            view.add([imported_flow.copy()])
+                            imported_count += 1
+                        else:
+                            skipped_count += 1
+
+                result.set_result(
+                    {
+                        "path": expanded_path,
+                        "imported_count": imported_count,
+                        "skipped_count": skipped_count,
+                    }
+                )
+            except (OSError, exceptions.FlowReadException) as exc:
+                result.set_exception(ValueError(f"Failed to import flows from '{path}': {exc}"))
+            except Exception as exc:
+                result.set_exception(exc)
+
+        master.event_loop.call_soon_threadsafe(_import_flows)
+        return result.result(timeout=30)
 
     def _require_master(self) -> Master:
         if self._master is None:

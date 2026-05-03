@@ -198,6 +198,16 @@ def duplicate_flow(flow_id: str) -> dict:
     return mitmproxy_controller.duplicate_flow(flow_id)
 
 
+@mcp.tool()
+def import_flows(path: str) -> dict:
+    """Import flows from a mitmproxy flow file or HAR file into mitmproxy's real view/store.
+
+    This loads flows into real mitmproxy state, so imported flows appear in
+    mitmweb and become available through the MCP read tools as well.
+    """
+    return mitmproxy_controller.import_flows(path)
+
+
 async def run_transport_async(transport: str) -> None:
     _validate_transport(transport)
 
