@@ -285,6 +285,35 @@ class MitmproxyController:
         master.event_loop.call_soon_threadsafe(_import_flows)
         return result.result(timeout=30)
 
+    def export_flows(self, path: str, flow_spec: str = "@all") -> dict[str, Any]:
+        master = self._require_master()
+        result: Future[dict[str, Any]] = Future()
+
+        def _export_flows() -> None:
+            try:
+                expanded_path = os.path.expanduser(path)
+                flows = self._resolve_http_flows(master, flow_spec)
+
+                if expanded_path.lower().endswith((".har", ".zhar")):
+                    master.commands.call("save.har", flows, expanded_path)
+                    export_format = "zhar" if expanded_path.lower().endswith(".zhar") else "har"
+                else:
+                    master.commands.call("save.file", flows, expanded_path)
+                    export_format = "mitmproxy"
+
+                result.set_result(
+                    {
+                        "path": expanded_path,
+                        "format": export_format,
+                        "exported_count": len(flows),
+                    }
+                )
+            except Exception as exc:
+                result.set_exception(exc)
+
+        master.event_loop.call_soon_threadsafe(_export_flows)
+        return result.result(timeout=30)
+
     def _require_master(self) -> Master:
         if self._master is None:
             raise RuntimeError("mitmproxy is not running, so active flow commands are unavailable.")

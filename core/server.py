@@ -208,6 +208,18 @@ def import_flows(path: str) -> dict:
     return mitmproxy_controller.import_flows(path)
 
 
+@mcp.tool()
+def export_flows(path: str, flow_spec: str = "@all") -> dict:
+    """Export flows from mitmproxy's real view/store into a file.
+
+    The export format is selected from the output filename:
+    .har or .zhar for HAR export, .mitm or .flow for mitmproxy flow dumps.
+    flow_spec uses mitmproxy view selectors such as @all, @marked, @focus,
+    or a mitmproxy filter expression.
+    """
+    return mitmproxy_controller.export_flows(path, flow_spec)
+
+
 async def run_transport_async(transport: str) -> None:
     _validate_transport(transport)
 
