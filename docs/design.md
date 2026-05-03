@@ -48,6 +48,7 @@ Examples:
 - `delete_flow` should delete the real mitmproxy flow
 - `clear_captured_flows` should clear the real mitmproxy view/store
 - `import_flows` should load flows into the real mitmproxy view/store
+- `export_flows` should write flows from the real mitmproxy view/store
 - `duplicate_flow` should use real mitmproxy duplication
 - `replay_flow` should use real mitmproxy replay
 - interception tools should use real mitmproxy interception state
@@ -232,6 +233,7 @@ Interception / live control:
 Flow lifecycle / mutation:
 
 - `import_flows`
+- `export_flows`
 - `duplicate_flow`
 - `replay_flow`
 - `revert_flow`
@@ -254,6 +256,16 @@ This matters because imported flows should behave like normal flows already pres
 - they should appear in mitmweb
 - they should be queryable through MCP read tools
 - they should be available to native tools like mark, comment, duplicate, replay, and delete
+
+### Exporting flows
+
+`export_flows`:
+
+- writes flows from real mitmproxy state to disk
+- supports HAR export and mitmproxy flow dump export
+- uses mitmproxy view selectors such as `@all`, `@marked`, and `@focus`
+
+This matters because export should reflect the real flows currently present in mitmproxy, not a separate MCP-only representation.
 
 ### Duplicate vs replay
 

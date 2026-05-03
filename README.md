@@ -16,6 +16,7 @@ Current capabilities include:
 - filter, count, and fetch detailed flow data
 - mark and comment flows
 - import flows from HAR files or mitmproxy flow dumps
+- export flows to HAR files or mitmproxy flow dumps
 - duplicate, replay, revert, delete, clear, kill, and resume flows
 - configure interception rules and inspect intercepted flows
 
@@ -279,7 +280,9 @@ Current redaction behavior includes:
 ### Flow lifecycle / mutation
 
 - `import_flows(path)`
-  Import flows from a HAR file or mitmproxy flow dump into the real `mitmproxy` view/store. The tool validates both the file extension and the file content format before import.
+  Import flows from a HAR file or mitmproxy flow dump into the real `mitmproxy` view/store.
+- `export_flows(path, flow_spec="@all")`
+  Export flows from the real `mitmproxy` view/store into a HAR file or mitmproxy flow dump. The output format is selected from the destination filename. `flow_spec` can be `@all`, `@marked`, `@focus`, or another mitmproxy flow selector/filter.
 - `duplicate_flow(flow_id)`
   Duplicate a real flow in the `mitmproxy` view without sending it.
 - `replay_flow(flow_id)`
@@ -294,6 +297,7 @@ Current redaction behavior includes:
 ## Notes
 
 - `import_flows` accepts `.har`, `.mitm`, and `.flow` files.
+- `export_flows` uses `.har` or `.zhar` for HAR export, and otherwise writes a mitmproxy flow dump.
 - imported flows are loaded into real `mitmproxy` state, so they appear in `mitmweb` and through the MCP read tools.
 - `duplicate_flow` creates another flow in `mitmproxy`, but does not send traffic.
 - `replay_flow` replays the current real flow through `mitmproxy`.
