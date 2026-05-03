@@ -1,6 +1,6 @@
 from mcp.server.fastmcp import FastMCP
 
-from ..control import mitmproxy_controller
+from ..controllers import mitmproxy_controller
 
 
 def register_flow_control_tools(mcp: FastMCP) -> None:

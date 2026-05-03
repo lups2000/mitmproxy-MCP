@@ -1,44 +1,16 @@
 from __future__ import annotations
 
-import os
-from concurrent.futures import Future
 from collections.abc import Sequence
+from concurrent.futures import Future
 from typing import Any
 from typing import cast
 
-from mitmproxy import exceptions
 from mitmproxy import flow as mitm_flow
 from mitmproxy import http
-from mitmproxy import io as mitm_io
-from mitmproxy import optmanager
 from mitmproxy.master import Master
 
 
-class MitmproxyController:
-    _SET_OPTION_BLACKLIST = {
-        "mode",
-        "listen_host",
-        "listen_port",
-        "confdir",
-        "certs",
-        "cert_passphrase",
-        "client_certs",
-        "ssl_insecure",
-        "ssl_verify_upstream_trusted_ca",
-        "ssl_verify_upstream_trusted_confdir",
-        "allow_hosts",
-        "ignore_hosts",
-    }
-
-    def __init__(self) -> None:
-        self._master: Master | None = None
-
-    def attach_master(self, master: Master) -> None:
-        self._master = master
-
-    def detach_master(self) -> None:
-        self._master = None
-
+class FlowController:
     def replay_flow(self, flow_id: str) -> dict[str, Any]:
         master = self._require_master()
         result: Future[dict[str, Any]] = Future()
@@ -123,95 +95,6 @@ class MitmproxyController:
                 result.set_exception(exc)
 
         master.event_loop.call_soon_threadsafe(_set_intercept)
-        return result.result(timeout=5)
-
-    def list_options(self, search: str | None = None) -> list[dict[str, Any]]:
-        master = self._require_master()
-        result: Future[list[dict[str, Any]]] = Future()
-
-        def _list_options() -> None:
-            try:
-                keys = list(master.options.keys())
-                if search:
-                    normalized_search = search.lower()
-                    keys = [key for key in keys if normalized_search in key.lower()]
-
-                dumped = optmanager.dump_dicts(master.options, keys)
-                result.set_result(
-                    [
-                        {
-                            "name": name,
-                            "type": metadata["type"],
-                            "default": metadata["default"],
-                            "value": metadata["value"],
-                            "help": metadata["help"],
-                            "choices": metadata["choices"],
-                        }
-                        for name, metadata in dumped.items()
-                    ]
-                )
-            except Exception as exc:
-                result.set_exception(exc)
-
-        master.event_loop.call_soon_threadsafe(_list_options)
-        return result.result(timeout=5)
-
-    def get_option(self, name: str) -> dict[str, Any]:
-        master = self._require_master()
-        result: Future[dict[str, Any]] = Future()
-
-        def _get_option() -> None:
-            try:
-                if name not in master.options.keys():
-                    raise ValueError(f"Unknown option: {name}")
-
-                metadata = optmanager.dump_dicts(master.options, [name])[name]
-                result.set_result(
-                    {
-                        "name": name,
-                        "type": metadata["type"],
-                        "default": metadata["default"],
-                        "value": metadata["value"],
-                        "help": metadata["help"],
-                        "choices": metadata["choices"],
-                    }
-                )
-            except Exception as exc:
-                result.set_exception(exc)
-
-        master.event_loop.call_soon_threadsafe(_get_option)
-        return result.result(timeout=5)
-
-    def set_option(self, name: str, value: Any) -> dict[str, Any]:
-        master = self._require_master()
-        result: Future[dict[str, Any]] = Future()
-
-        def _set_option() -> None:
-            try:
-                if name not in master.options.keys():
-                    raise ValueError(f"Unknown option: {name}")
-
-                if name in self._SET_OPTION_BLACKLIST:
-                    raise ValueError(f"Setting option '{name}' is not allowed through MCP.")
-
-                specs = self._build_option_specs(name, value)
-                master.options.set(*specs)
-
-                metadata = optmanager.dump_dicts(master.options, [name])[name]
-                result.set_result(
-                    {
-                        "name": name,
-                        "type": metadata["type"],
-                        "default": metadata["default"],
-                        "value": metadata["value"],
-                        "help": metadata["help"],
-                        "choices": metadata["choices"],
-                    }
-                )
-            except Exception as exc:
-                result.set_exception(exc)
-
-        master.event_loop.call_soon_threadsafe(_set_option)
         return result.result(timeout=5)
 
     def resume_flow(self, flow_id: str) -> dict[str, Any]:
@@ -353,99 +236,6 @@ class MitmproxyController:
         master.event_loop.call_soon_threadsafe(_duplicate_flow)
         return result.result(timeout=5)
 
-    def import_flows(self, path: str) -> dict[str, Any]:
-        master = self._require_master()
-        result: Future[dict[str, Any]] = Future()
-
-        def _import_flows() -> None:
-            try:
-                expanded_path = os.path.expanduser(path)
-                view = master.addons.get("view")
-                if view is None:
-                    raise RuntimeError("mitmproxy view addon is unavailable, so flow import cannot run.")
-
-                imported_count = 0
-                skipped_count = 0
-
-                with open(expanded_path, "rb") as flow_file:
-                    for imported_flow in mitm_io.FlowReader(flow_file).stream():
-                        if isinstance(imported_flow, http.HTTPFlow):
-                            view.add([imported_flow.copy()])
-                            imported_count += 1
-                        else:
-                            skipped_count += 1
-
-                result.set_result(
-                    {
-                        "path": expanded_path,
-                        "imported_count": imported_count,
-                        "skipped_count": skipped_count,
-                    }
-                )
-            except (OSError, exceptions.FlowReadException) as exc:
-                result.set_exception(ValueError(f"Failed to import flows from '{path}': {exc}"))
-            except Exception as exc:
-                result.set_exception(exc)
-
-        master.event_loop.call_soon_threadsafe(_import_flows)
-        return result.result(timeout=30)
-
-    def export_flows(self, path: str, flow_spec: str = "@all") -> dict[str, Any]:
-        master = self._require_master()
-        result: Future[dict[str, Any]] = Future()
-
-        def _export_flows() -> None:
-            try:
-                expanded_path = os.path.expanduser(path)
-                flows = self._resolve_http_flows(master, flow_spec)
-
-                if expanded_path.lower().endswith((".har", ".zhar")):
-                    master.commands.call("save.har", flows, expanded_path)
-                    export_format = "zhar" if expanded_path.lower().endswith(".zhar") else "har"
-                else:
-                    master.commands.call("save.file", flows, expanded_path)
-                    export_format = "mitmproxy"
-
-                result.set_result(
-                    {
-                        "path": expanded_path,
-                        "format": export_format,
-                        "exported_count": len(flows),
-                    }
-                )
-            except Exception as exc:
-                result.set_exception(exc)
-
-        master.event_loop.call_soon_threadsafe(_export_flows)
-        return result.result(timeout=30)
-
-    def _require_master(self) -> Master:
-        if self._master is None:
-            raise RuntimeError("mitmproxy is not running, so active flow commands are unavailable.")
-
-        return self._master
-
-    def _build_option_specs(self, name: str, value: Any) -> list[str]:
-        if isinstance(value, bool):
-            return [f"{name}={'true' if value else 'false'}"]
-
-        if value is None:
-            return [name]
-
-        if isinstance(value, int):
-            return [f"{name}={value}"]
-
-        if isinstance(value, str):
-            return [f"{name}={value}"]
-
-        if isinstance(value, list) and all(isinstance(item, str) for item in value):
-            return [f"{name}={item}" for item in value]
-
-        raise ValueError(
-            f"Unsupported value for option '{name}'. "
-            "Supported value types are bool, int, str, null, and list[str]."
-        )
-
     def _resolve_http_flow(self, master: Master, flow_id: str) -> http.HTTPFlow:
         flows = self._resolve_http_flows(master, f"@{flow_id}")
         if not flows:
@@ -456,6 +246,3 @@ class MitmproxyController:
     def _resolve_http_flows(self, master: Master, flow_spec: str) -> list[http.HTTPFlow]:
         flows = cast(Sequence[mitm_flow.Flow], master.commands.call("view.flows.resolve", flow_spec))
         return [flow for flow in flows if isinstance(flow, http.HTTPFlow)]
-
-
-mitmproxy_controller = MitmproxyController()

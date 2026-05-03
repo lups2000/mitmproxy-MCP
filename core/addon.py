@@ -6,7 +6,7 @@ import threading
 from mitmproxy import ctx
 from mitmproxy import http
 
-from .control import mitmproxy_controller
+from .controllers import mitmproxy_controller
 from .server import mcp
 from .server import run_transport_async
 from .server import SUPPORTED_TRANSPORTS
