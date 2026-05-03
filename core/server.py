@@ -5,6 +5,7 @@ from .tools import register_flow_control_tools
 from .tools import register_flow_mark_tools
 from .tools import register_flow_read_tools
 from .tools import register_flow_transfer_tools
+from .tools import register_option_tools
 
 SUPPORTED_TRANSPORTS = {"sse", "streamable-http"}
 
@@ -20,6 +21,7 @@ register_flow_read_tools(mcp)
 register_flow_mark_tools(mcp)
 register_flow_control_tools(mcp)
 register_flow_transfer_tools(mcp)
+register_option_tools(mcp)
 
 
 async def run_transport_async(transport: str) -> None:
