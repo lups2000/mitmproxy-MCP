@@ -17,3 +17,13 @@ def register_option_tools(mcp: FastMCP) -> None:
     def get_option(name: str) -> dict:
         """Get one mitmproxy runtime option by exact name."""
         return mitmproxy_controller.get_option(name)
+
+    @mcp.tool()
+    def set_option(name: str, value: bool | int | str | list[str] | None) -> dict:
+        """Set one mitmproxy runtime option by exact name.
+
+        This uses mitmproxy's native option parsing and updates the real running
+        instance. Some high-risk options are intentionally blocked through a
+        blacklist.
+        """
+        return mitmproxy_controller.set_option(name, value)
