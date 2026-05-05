@@ -8,3 +8,9 @@ dependencies = [
     "mcp>=1.27.0",
     "mitmproxy>=12.2.1",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-cov>=5.0.0",
+]
