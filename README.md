@@ -167,6 +167,66 @@ Verify:
 codex mcp list
 ```
 
+### VS Code (Copilot)
+
+Create `.vscode/mcp.json` in your workspace:
+
+```json
+{
+  "servers": {
+    "mitmproxyMcp": {
+      "type": "http",
+      "url": "http://127.0.0.1:8000/mcp"
+    }
+  }
+}
+```
+
+Then in VS Code:
+
+- run `MCP: List Servers` from the Command Palette to confirm the server is detected
+- open Copilot Chat / Agent mode and use the `mitmproxyMcp` tools
+
+For SSE, change:
+
+```json
+"type": "sse",
+"url": "http://127.0.0.1:8000/sse"
+```
+
+### Cursor
+
+Create `.cursor/mcp.json` in the project, or `~/.cursor/mcp.json` for a global setup:
+
+```json
+{
+  "mcpServers": {
+    "mitmproxy-mcp": {
+      "url": "http://127.0.0.1:8000/mcp"
+    }
+  }
+}
+```
+
+Then verify from Cursor's CLI:
+
+```bash
+cursor-agent mcp list
+```
+
+For SSE, use:
+
+```json
+{
+  "mcpServers": {
+    "mitmproxy-mcp": {
+      "transport": "sse",
+      "url": "http://127.0.0.1:8000/sse"
+    }
+  }
+}
+```
+
 ## Configuration
 
 Environment variables are supported through `.env`.
