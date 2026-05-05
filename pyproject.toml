@@ -14,3 +14,9 @@ dev = [
     "pytest>=8.3.0",
     "pytest-cov>=5.0.0",
 ]
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore:tagMap is deprecated\\. Please use TAG_MAP instead\\.:DeprecationWarning:ldap3\\.utils\\.asn1",
+    "ignore:typeMap is deprecated\\. Please use TYPE_MAP instead\\.:DeprecationWarning:ldap3\\.utils\\.asn1",
+]

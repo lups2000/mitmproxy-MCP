@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import threading
 
 from mitmproxy import ctx
@@ -12,6 +13,9 @@ from .server import run_transport_async
 from .server import SUPPORTED_TRANSPORTS
 
 from .store import flow_projection_store
+
+
+logger = logging.getLogger(__name__)
 
 
 class MCPFlowCaptureAddon:
@@ -49,7 +53,7 @@ class MCPFlowCaptureAddon:
         )
         self._mcp_thread.start()
 
-        ctx.log.info(f"MCP server started on {ctx.options.mcp_host}:{ctx.options.mcp_port} via {transport}")
+        logger.info("MCP server started on %s:%s via %s", ctx.options.mcp_host, ctx.options.mcp_port, transport)
 
     def _run_mcp_server(self, transport: str) -> None:
         asyncio.run(run_transport_async(transport))
