@@ -1,12 +1,16 @@
 # mitmproxy MCP
 
-`mitmproxy-mcp` is an MCP server embedded inside `mitmproxy`.
+`mitmproxy-mcp` is an MCP server embedded inside [`mitmproxy`](https://github.com/mitmproxy/mitmproxy).
 
 The goal is simple:
 
 > make `mitmproxy` available to agents the way `mitmweb` makes it available to humans
 
 Architecture and rationale live in [docs/design.md](/Users/matte/Desktop/mitmproxy-MCP/docs/design.md).
+
+`mitmproxy` is installed as a project dependency, but this MCP still must run inside
+`mitmproxy`, `mitmweb`, or `mitmdump` with the addon enabled. It is not a standalone
+MCP process on its own.
 
 ## What It Offers
 
@@ -84,6 +88,9 @@ Optional virtualenv activation:
 ```bash
 source .venv/bin/activate
 ```
+
+To use this MCP, run it through `mitmproxy`, `mitmweb`, or `mitmdump`.
+This repository does not provide a standalone MCP process outside the mitmproxy runtime.
 
 Run with `mitmweb`:
 
