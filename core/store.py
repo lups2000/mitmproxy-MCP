@@ -67,6 +67,36 @@ class FlowProjectionStore:
             flow = self._flows.get(flow_id)
             return asdict(flow) if flow else None
 
+    def diff_flows(self, left_flow_id: str, right_flow_id: str) -> dict[str, Any]:
+        with self._lock:
+            left_flow = self._flows.get(left_flow_id)
+            right_flow = self._flows.get(right_flow_id)
+
+            if left_flow is None:
+                raise ValueError(f"Unknown flow_id: {left_flow_id}")
+
+            if right_flow is None:
+                raise ValueError(f"Unknown flow_id: {right_flow_id}")
+
+            left_data = asdict(left_flow)
+            right_data = asdict(right_flow)
+            differing_fields: dict[str, dict[str, Any]] = {}
+
+            for field_name, left_value in left_data.items():
+                right_value = right_data[field_name]
+                if left_value != right_value:
+                    differing_fields[field_name] = {
+                        "left": left_value,
+                        "right": right_value,
+                    }
+
+            return {
+                "left_flow_id": left_flow_id,
+                "right_flow_id": right_flow_id,
+                "different": bool(differing_fields),
+                "differences": differing_fields,
+            }
+
     def get_flow_count(
         self,
         marked: bool | None = None,

@@ -75,6 +75,19 @@ def register_flow_read_tools(mcp: FastMCP) -> None:
         }
 
     @mcp.tool()
+    def diff_flows(left_flow_id: str, right_flow_id: str) -> dict:
+        """Compare two flows using the redacted MCP flow projection.
+
+        This reads from the MCP flow projection and does not modify mitmproxy state.
+        Use this when you want to understand how two captured flows differ across
+        request, response, marker, comment, interception, and error fields.
+        left_flow_id and right_flow_id must be mitmproxy flow ids returned by
+        flow-listing tools. The comparison uses redacted MCP-visible data, not raw
+        unredacted flow objects.
+        """
+        return flow_projection_store.diff_flows(left_flow_id, right_flow_id)
+
+    @mcp.tool()
     def list_marked_flows(limit: int = 20, offset: int = 0) -> list[dict]:
         """List redacted summaries for flows with any mitmproxy marker set.
 

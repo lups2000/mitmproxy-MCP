@@ -75,6 +75,44 @@ def test_get_flow_count(sample_flow):
     assert store.get_flow_count() == 1
 
 
+def test_diff_flows_reports_changed_fields(sample_flow):
+    store = FlowProjectionStore(max_flows=10)
+    left = sample_flow
+    right = make_http_flow(
+        url="https://example.com/other?foo=1&token=secret",
+        method="POST",
+        status_code=500,
+        reason="Server Error",
+        marked=":red_circle:",
+        comment="changed",
+        intercepted=True,
+        error_message="boom",
+    )
+    store.add_from_mitmproxy_flow(left)
+    store.add_from_mitmproxy_flow(right)
+
+    result = store.diff_flows(left.id, right.id)
+
+    assert result["left_flow_id"] == left.id
+    assert result["right_flow_id"] == right.id
+    assert result["different"] is True
+    assert result["differences"]["method"] == {"left": "GET", "right": "POST"}
+    assert result["differences"]["status_code"] == {"left": 200, "right": 500}
+    assert result["differences"]["comment"] == {"left": "", "right": "changed"}
+
+
+def test_diff_flows_rejects_unknown_ids(sample_flow):
+    store = FlowProjectionStore(max_flows=10)
+    detail = store.add_from_mitmproxy_flow(sample_flow)
+
+    try:
+        store.diff_flows(detail.id, "missing-id")
+    except ValueError as exc:
+        assert "Unknown flow_id" in str(exc)
+    else:
+        raise AssertionError("Expected ValueError")
+
+
 def test_remove_flow_and_missing_get(sample_flow):
     store = FlowProjectionStore(max_flows=10)
     detail = store.add_from_mitmproxy_flow(sample_flow)

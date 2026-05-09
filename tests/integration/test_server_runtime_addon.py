@@ -7,6 +7,7 @@ from mitmproxy.test import tflow
 from core.addon import MCPFlowCaptureAddon
 from core.runtime import run_mitmproxy
 from core.server import SUPPORTED_TRANSPORTS, _validate_transport, main, run_transport_async
+from tests.helpers import make_http_flow
 
 
 def test_validate_transport():
@@ -75,6 +76,30 @@ def test_read_and_mark_tools_follow_real_projection_state(addon_env, mcp_tools):
     assert len(marked_list) == 1
     assert marked_list[0]["marker"] == ":large_blue_circle:"
     assert unmark_result == {"flow_id": flow.id, "marked": False, "marker": None}
+
+
+def test_diff_tool_compares_redacted_flow_projection(addon_env, mcp_tools):
+    left = make_http_flow(url="https://example.com/items", method="GET", status_code=200)
+    right = make_http_flow(
+        url="https://example.com/items?foo=1&token=secret",
+        method="POST",
+        status_code=500,
+        reason="Server Error",
+        marked=":red_circle:",
+        comment="review me",
+        intercepted=True,
+        error_message="boom",
+    )
+    addon_env.view.add([left, right])
+
+    result = mcp_tools["diff_flows"](left.id, right.id)
+
+    assert result["left_flow_id"] == left.id
+    assert result["right_flow_id"] == right.id
+    assert result["different"] is True
+    assert result["differences"]["method"] == {"left": "GET", "right": "POST"}
+    assert result["differences"]["status_code"] == {"left": 200, "right": 500}
+    assert result["differences"]["marker"] == {"left": None, "right": ":red_circle:"}
 
 
 def test_control_and_option_tools_update_real_runtime(addon_env, mcp_tools):
