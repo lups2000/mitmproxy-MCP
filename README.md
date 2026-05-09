@@ -1,5 +1,11 @@
 # mitmproxy MCP
 
+[![CI](https://github.com/lups2000/mitmproxy-MCP/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/lups2000/mitmproxy-MCP/actions/workflows/ci.yml)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![MCP](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-6f42c1.svg)](https://modelcontextprotocol.io/)
+[![mitmproxy](https://img.shields.io/badge/mitmproxy-addon--first-orange.svg)](https://github.com/mitmproxy/mitmproxy)
+
 `mitmproxy-mcp` is an MCP server embedded inside [`mitmproxy`](https://github.com/mitmproxy/mitmproxy).
 
 The goal is simple:
