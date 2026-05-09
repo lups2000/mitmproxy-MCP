@@ -158,6 +158,7 @@ The projection gives us:
 - a stable API contract
 - a clear privacy boundary
 - simpler read logic
+- a safe place for analysis-oriented features such as comparing two captured flows
 
 ## Privacy Model
 
@@ -215,6 +216,7 @@ Read / inspect:
 - `list_captured_flows`
 - `get_captured_flow`
 - `get_flow_count`
+- `diff_flows`
 - `list_marked_flows`
 - `get_intercepted_flows`
 
@@ -254,8 +256,6 @@ Flow lifecycle / mutation:
 `import_flows`:
 
 - accepts HAR files and mitmproxy flow dump files
-- validates the file extension before import
-- validates the file content format before import
 - loads flows into real mitmproxy state, not only into the projection
 
 This matters because imported flows should behave like normal flows already present in mitmproxy:
@@ -303,6 +303,17 @@ This keeps the MCP useful for runtime control without immediately exposing the r
 - replays the current real flow through mitmproxy
 - follows mitmproxy replay semantics
 
+### Comparing flows
+
+`diff_flows`:
+
+- compares two flows using the redacted MCP projection
+- does not mutate mitmproxy state
+- intentionally reports only MCP-visible redacted data, not raw unredacted flow objects
+
+This makes it useful for safe traffic analysis and for comparing two captured flows
+after replay, duplication, import, or other workflow steps.
+
 ### Interception can happen twice
 
 If an intercept filter is broad, for example it matches both request and response, the same flow may be intercepted twice:
@@ -320,12 +331,20 @@ This is normal mitmproxy behavior, not necessarily a bug.
   Thin top-level addon entry point.
 - [core/addon.py](/Users/matte/Desktop/mitmproxy-MCP/core/addon.py)
   Main mitmproxy addon, runtime wiring, signal subscriptions, projection sync.
-- [core/control.py](/Users/matte/Desktop/mitmproxy-MCP/core/control.py)
-  Native mitmproxy control bridge for MCP write tools.
+- [core/controllers/mitmproxy_controller.py](/Users/matte/Desktop/mitmproxy-MCP/core/controllers/mitmproxy_controller.py)
+  Main native mitmproxy control bridge composed from controller modules.
+- [core/controllers/flows.py](/Users/matte/Desktop/mitmproxy-MCP/core/controllers/flows.py)
+  Native flow control operations.
+- [core/controllers/options.py](/Users/matte/Desktop/mitmproxy-MCP/core/controllers/options.py)
+  Native mitmproxy option inspection and mutation.
+- [core/controllers/transfer.py](/Users/matte/Desktop/mitmproxy-MCP/core/controllers/transfer.py)
+  Import and export operations.
 - [core/store.py](/Users/matte/Desktop/mitmproxy-MCP/core/store.py)
   `FlowProjectionStore` read model.
 - [core/server.py](/Users/matte/Desktop/mitmproxy-MCP/core/server.py)
-  MCP tool definitions.
+  MCP registration entry point.
+- [core/tools](/Users/matte/Desktop/mitmproxy-MCP/core/tools)
+  Grouped MCP tool modules for read, control, transfer, marks, and options.
 - [core/models.py](/Users/matte/Desktop/mitmproxy-MCP/core/models.py)
   Flow summary/detail models.
 - [core/privacy.py](/Users/matte/Desktop/mitmproxy-MCP/core/privacy.py)

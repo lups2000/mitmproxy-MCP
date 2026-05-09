@@ -31,13 +31,14 @@ Important product constraint:
 - this project is **addon-first**
 - it is **not** a standalone `stdio` MCP server
 
-## Tool Overview (19 Tools)
+## Tool Overview (20 Tools)
 
 ### Read / inspect
 
 - `list_captured_flows`: browse redacted flow summaries with filtering and pagination
 - `get_captured_flow`: inspect one flow in detail
 - `get_flow_count`: count flows matching the main filters
+- `diff_flows`: compare two redacted captured flows field by field
 - `list_marked_flows`: show flows that currently have a mitmproxy marker
 - `get_intercepted_flows`: show flows that are currently intercepted
 
